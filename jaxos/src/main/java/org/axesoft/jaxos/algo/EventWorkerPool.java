@@ -10,10 +10,7 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * @author gaoyuan
- * @sine 2019/9/17.
- */
+
 public class EventWorkerPool implements EventTimer {
     private static Logger logger = LoggerFactory.getLogger(EventWorkerPool.class);
 

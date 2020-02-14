@@ -12,10 +12,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * @author bison
- * @sine 2020/1/16.
- */
 public class PartedThreadPool implements RequestExecutor {
     private TansExecutor[] executors;
 

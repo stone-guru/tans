@@ -16,10 +16,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/**
- * @author bison
- * @sine 2019/12/26.
- */
 public class TansMetrics {
     private  PrometheusMeterRegistry registry;
     private Counter requestCounter;

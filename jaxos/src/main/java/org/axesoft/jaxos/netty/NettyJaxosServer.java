@@ -26,10 +26,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-/**
- * @author gaoyuan
- * @sine 2019/8/22.
- */
 public class NettyJaxosServer {
     private static Logger logger = LoggerFactory.getLogger(NettyJaxosServer.class);
 

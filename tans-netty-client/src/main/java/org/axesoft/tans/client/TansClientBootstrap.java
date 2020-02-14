@@ -34,11 +34,6 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Function;
 
-
-/**
- * @author gaoyuan
- * @sine 2019/9/29.
- */
 public class TansClientBootstrap {
     private final static AttributeKey<InetSocketAddress> ATTR_ADDRESS = AttributeKey.newInstance("ADDRESS");
     private final static AttributeKey<HttpConnector> ATTR_CONNECTOR = AttributeKey.newInstance("HTTP_CLIENT");

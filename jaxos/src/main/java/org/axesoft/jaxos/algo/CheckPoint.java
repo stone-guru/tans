@@ -6,10 +6,7 @@ import org.axesoft.jaxos.base.DateFormater;
 import java.io.Serializable;
 import java.util.Date;
 
-/**
- * @author gaoyuan
- * @sine 2019/9/24.
- */
+
 public class CheckPoint implements Serializable {
     public static CheckPoint EMPTY = new CheckPoint(0, 0, 0, ByteString.EMPTY, Instance.emptyOf(0));
 

@@ -15,12 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-/**
- * The standard paxos proposer
- *
- * @author gaoyuan
- * @sine 2019/8/24.
- */
+
 public class Proposer {
     private static final Logger logger = LoggerFactory.getLogger(Proposer.class);
 

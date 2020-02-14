@@ -19,10 +19,6 @@ import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-/**
- * @author gaoyuan
- * @sine 2019/8/25.
- */
 public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     private static Logger logger = LoggerFactory.getLogger(ProtoMessageCoder.class);
 

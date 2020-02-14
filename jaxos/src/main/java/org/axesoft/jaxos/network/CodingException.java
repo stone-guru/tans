@@ -1,9 +1,5 @@
 package org.axesoft.jaxos.network;
 
-/**
- * @author gaoyuan
- * @sine 2019/8/25.
- */
 public class CodingException extends RuntimeException {
     public CodingException(String message) {
         super(message);

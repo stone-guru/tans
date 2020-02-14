@@ -11,10 +11,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-/**
- * @author gaoyuan
- * @sine 2019/10/15.
- */
+
 public class InstanceRingCacheTest {
     private Instance newValue(long instanceId) {
         return new Instance(1, instanceId, 2,

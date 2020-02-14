@@ -9,10 +9,6 @@ import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-/**
- * @author gaoyuan
- * @sine 2019/8/24.
- */
 public class JaxosSettings {
     public static final int SERVER_ID_RANGE = 100;
 

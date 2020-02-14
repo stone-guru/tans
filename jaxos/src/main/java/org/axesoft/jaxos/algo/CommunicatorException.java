@@ -1,9 +1,6 @@
 package org.axesoft.jaxos.algo;
 
-/**
- * @author gaoyuan
- * @sine 2019/9/3.
- */
+
 public class CommunicatorException extends RuntimeException {
     public CommunicatorException() {
         super();

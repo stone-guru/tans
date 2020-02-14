@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * @author bison
  * @sine 2020/1/10.
  */
 public class MemoryAcceptorLogger implements AcceptorLogger {

@@ -14,10 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * @author gaoyuan
- * @sine 2019/9/7.
- */
 public class MicroMeterJaxosMetrics implements JaxosMetrics {
     private final int serverId;
     private final PrometheusMeterRegistry registry;

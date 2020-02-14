@@ -5,10 +5,7 @@ import com.google.common.util.concurrent.RateLimiter;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-/**
- * @author bison
- * @sine 2020/1/2.
- */
+
 public class GroupedRateLimiter {
     private ConcurrentMap<Integer, RateLimiter> rateLimiterMap = new ConcurrentHashMap<>();
     private double permitsPerSecond;

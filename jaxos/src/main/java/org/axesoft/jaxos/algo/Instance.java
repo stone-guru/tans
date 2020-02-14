@@ -5,10 +5,6 @@ import com.google.common.collect.ImmutableMap;
 import java.io.Serializable;
 import java.util.Map;
 
-/**
- * @author gaoyuan
- * @sine 2019/9/27.
- */
 public class Instance implements Serializable {
     private static final Map<Integer, Instance> EMPTY_INSTANCES = initEmptyInstances();
 

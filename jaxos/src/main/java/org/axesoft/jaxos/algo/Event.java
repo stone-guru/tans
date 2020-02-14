@@ -8,10 +8,7 @@ import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-/**
- * @author gaoyuan
- * @sine 2019/8/22.
- */
+
 public abstract class Event {
     public enum Code {
         NOOP, HEART_BEAT, HEART_BEAT_RESPONSE,

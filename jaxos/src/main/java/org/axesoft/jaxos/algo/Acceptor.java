@@ -4,10 +4,7 @@ import org.axesoft.jaxos.JaxosSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * @author gaoyuan
- * @sine 2019/8/22.
- */
+
 public class Acceptor {
     private static final Logger logger = LoggerFactory.getLogger(Acceptor.class);
 

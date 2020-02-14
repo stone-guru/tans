@@ -35,10 +35,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
-/**
- * @author gaoyuan
- * @sine 2019/8/24.
- */
 public class NettyCommunicatorFactory implements CommunicatorFactory {
     private final static AttributeKey<JaxosSettings.Peer> ATTR_PEER = AttributeKey.newInstance("PEER");
 

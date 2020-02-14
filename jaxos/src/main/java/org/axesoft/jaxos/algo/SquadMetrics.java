@@ -1,9 +1,5 @@
 package org.axesoft.jaxos.algo;
 
-/**
- * @author bison
- * @sine 2020/1/6.
- */
 public interface SquadMetrics {
     enum ProposalResult {
         SUCCESS, CONFLICT, OTHER
