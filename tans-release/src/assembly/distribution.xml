@@ -1,0 +1,36 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
+  <id>rc</id>
+  <formats>
+    <format>dir</format>
+    <format>tar.gz</format>
+  </formats>
+  <dependencySets>
+    <dependencySet>
+    <outputDirectory>lib</outputDirectory>
+    <useProjectArtifact>true</useProjectArtifact>
+    <scope>runtime</scope>
+  </dependencySet>
+  </dependencySets>
+
+  <fileSets>
+    <fileSet>
+      <directory>${basedir}/../tans-server/src/config</directory>
+      <outputDirectory>config</outputDirectory>
+      <fileMode>0644</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>src/script</directory>
+      <outputDirectory>bin</outputDirectory>
+      <includes>
+	<include>start</include>
+	<include>stop</include>
+	<include>test</include>
+	<include>restart</include>
+	<include>post</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+  </fileSets>
+</assembly>

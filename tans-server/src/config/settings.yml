@@ -1,0 +1,37 @@
+core:
+  id: 1
+  thread.number: 3
+  peer.timeout: 200m
+  partition.number: 6
+
+db:
+  path: $home/var/tans/data
+  sync: 2s
+  checkpoint.minutes: 7
+
+learn:
+  timeout: 5s
+  max-instance: 50000
+  max-send: 10000
+
+leader:
+  lease: 2s
+  mandatory: true
+  
+peers:
+  - id: 1
+    hostname: localhost
+    consensus-port: 9091
+    http-port: 8081
+  - id: 2
+    hostname: localhost
+    consensus-port: 9092
+    http-port: 8082
+  - id: 3
+    hostname: localhost
+    consensus-port: 9093
+    http-port: 8083
+tans:
+  batch-size: 16
+  log-home: $home/var/tans/logs
+

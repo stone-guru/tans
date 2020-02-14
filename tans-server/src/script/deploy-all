@@ -1,0 +1,11 @@
+#!/bin/bash
+
+SERVERS=("sheep1" "sheep2" "sheep3")
+
+DIR=$(dirname "$0")
+
+for server in ${SERVERS[*]}
+do
+  $DIR/deploy $server 
+done
+

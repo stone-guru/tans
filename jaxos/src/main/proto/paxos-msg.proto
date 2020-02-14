@@ -1,0 +1,146 @@
+// -*- compile-command: "protoc paxos-msg.proto --java_out=../java/" -*-
+
+syntax = "proto3";
+package  org.axesoft.jaxos.network.protobuff;
+
+option java_outer_classname="PaxosMessage";
+
+enum Code {
+  NONE = 0;
+  
+  HEARTBEAT_REQ = 1;
+  HEARTBEAT_RES = 2;
+  
+  PREPARE_REQ = 3;
+  PREPARE_RES = 4;
+  ACCEPT_REQ = 5;
+  ACCEPT_RES = 6;
+  
+  ACCEPTED_NOTIFY = 7;
+  ACCEPTED_ACK = 8;
+
+  //NOOP=10;
+
+  LEARN_REQ = 11;
+  LEARN_RES = 12;
+
+  CHOSEN_QUERY_REQ = 13;
+  CHOSEN_QUERY_RES = 14;
+}
+
+message DataGram {
+  Code code = 1;
+  int32 sender = 2;
+  int64 timestamp = 3;
+  bytes body = 4;
+}
+
+enum ValueType {
+  NOTHING = 0;
+  APPLICATION = 1;
+  NOOP = 2;
+}
+
+message BallotValue {
+  int64 id = 1;
+  ValueType type = 2;
+  bytes content = 3;
+}
+
+message ChosenInfo {
+  int64 instanceId = 1;
+  int64 ballotId = 2;
+  int64 elapsedMillis = 3;
+}
+
+message PrepareReq {
+  int32 squadId = 1;
+  int64 instanceId = 2;
+  int32 round = 3;
+  int32 proposal = 4;
+  ChosenInfo chosenInfo = 5;
+}
+
+message PrepareRes {
+  int32 squadId = 1;
+  int64 instanceId = 2;
+  int32 round = 3;
+  int32 result = 4;
+  int32 maxProposal = 5;
+  int32 acceptedProposal = 6;
+  BallotValue acceptedValue = 7;
+  ChosenInfo chosenInfo = 8;
+}
+
+message AcceptReq {
+  int32 squadId = 1;
+  int64 instanceId = 2;
+  int32 round = 3;
+  int32 proposal = 4;
+  BallotValue value = 5;
+  ChosenInfo chosenInfo = 6;
+}
+
+message AcceptRes {
+  int32 squadId = 1;
+  int64 instanceId = 2;
+  int32 round = 3;
+  int32 result = 4;
+  int32 maxProposal = 5;
+  int64 acceptedBallotId = 6;
+  int64 chosenInstanceId = 7;
+  ChosenInfo chosenInfo = 8;
+}
+
+message AcceptedNotify {
+  int32 squadId = 1;
+  int64 instanceId = 2;
+  int32 proposal = 3;
+  int64 ballotId = 4;
+}
+
+message ChosenInstanceIdRes {
+  repeated ChosenInstanceId chosenInstance = 1;
+}
+
+message ChosenInstanceId {
+  int32 squadId = 1;
+  int64 chosenInstanceId = 2;
+}
+
+message LearnReq {
+  int32 squadId = 1;
+  int64 lowInstanceId = 2;
+  int64 highInstanceId = 3;
+}
+
+message LearnRes {
+  int32 squadId = 1;
+  repeated Instance instance = 2;
+  CheckPoint checkPoint = 3;
+}
+
+message Instance {
+  int32 squadId = 1;
+  int64 instanceId = 2;
+  int32 proposal = 3;
+  BallotValue value = 4;
+}
+
+message ChosenQueryRes {
+  repeated SquadChosen chosen = 1;
+}
+
+message SquadChosen {
+  int32 squadId = 1;
+  int64 instanceId = 2;
+}
+
+message CheckPoint {
+  int32 squadId = 1;
+  int64 instanceId = 2;
+  int64 timestamp = 3;
+  bytes content = 4;
+  Instance lastInstance = 5;
+}
+

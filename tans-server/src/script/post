@@ -1,0 +1,57 @@
+#!/bin/bash
+SERVERS=("localhost:8081" "localhost:8082" "localhost:8083")
+
+# $1 the serial number
+# $2 is the keyname
+# $3 is the number of required key, default is 1
+function detect_url(){
+    let k=$1%${#SERVERS[@]}
+    #echo "d=$1, k=$k" 1>&2
+    url="http://${SERVERS[$k]}/acquire?key=$2&n=${3:=1}"
+    echo $url 1>&2
+    result=$(curl -s -i $url)
+    if [ -z "$result" ]; then
+	#echo "nothing"
+	return 1
+    fi
+
+    if echo "$result"|grep 'HTTP/1.1 200 OK' >> /dev/null; then
+	echo "$url"
+    else
+	loc=$(echo "$result"|grep 'location:')
+	#echo "redirect to $loc"
+	if [ -n "$loc" ]; then
+	    pat='location:'
+	    echo ${loc##$pat}
+	fi
+    fi    
+}
+
+REQ_COUNT=1000
+PAR_COUNT=7
+sleep_seconds=7
+
+n=${1:-1000}
+
+while [ true ]; do
+    i=0
+    army_no=$(date "+%M")
+    army="army$army_no"
+
+    epoch=$(date "+%s")
+    let division_no=$epoch%1000+1
+    division="division$division_no"
+
+    while [ $i -lt $n ]; do
+	let j=$i%200+1
+	let num=$i%5+1
+	url=$(detect_url $i "$army.$division.soldier$j.id" "$num")
+	if [ -n "$url" ]; then
+	    ab -q -S -n $REQ_COUNT -c $PAR_COUNT -k -l "$url"
+	fi
+	let i=$i+1
+	#echo $i
+    done
+    echo "sleep $sleep_seconds"
+    sleep $sleep_seconds
+done    

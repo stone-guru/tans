@@ -1,0 +1,36 @@
+core:
+  id: 1
+  thread.number: 3
+  peer.timeout: 200m
+  partition.number: 6
+
+db:
+  path: ./data
+  sync: 2s
+  checkpoint.minutes: 7
+
+learn:
+  timeout: 5s
+  max-instance: 50000
+  max-send: 10000
+
+leader:
+  lease: 2s
+  mandatory: true
+  
+peers:
+  - id: 1
+    hostname: sheep1
+    consensus-port: 9091
+    http-port: 8081
+  - id: 2
+    hostname: sheep2
+    consensus-port: 9091
+    http-port: 8081
+  - id: 3
+    hostname: sheep3
+    consensus-port: 9091
+    http-port: 8081
+tans:
+  batch-size: 16
+

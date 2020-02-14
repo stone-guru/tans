@@ -1,0 +1,9 @@
+#/bin/sh
+server=${1:-sheep1}
+DIR=$(dirname "$0")
+
+echo "deploy to $server"
+TANS_SERVER_JAR=$DIR/target/tans-server-0.1.jar
+
+scp  $TANS_SERVER_JAR bison@$server:/home/bison/tans-server-0.1/lib/  && \
+  ssh bison@$server 'nohup /home/bison/tans-server-0.1/bin/restart & ; tail -f nohup.out'

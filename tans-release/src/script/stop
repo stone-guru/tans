@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+PID=$(jps|grep 'tans-server'|head -n 1|cut -f 1 -d ' ')
+
+if [ -z "$PID" ]; then
+  echo "No tans server process was found!"
+  return
+fi
+
+kill -15 $PID
+
+I=$PID
+echo wait $PID stoping
+while [ -n "$I" ]; do 
+   sleep 1
+   echo "..."
+   I=$(ps -p "$PID" -o pid -h)
+done
+
+echo "$PID terminated"
+

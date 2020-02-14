@@ -1,0 +1,7 @@
+#!/bin/sh
+GREP="grep -nH --color=always"
+for f in `ls ./logs/jaxos.node*.log`;
+do
+    $GREP  Exception $f
+    $GREP  lost $f
+done
