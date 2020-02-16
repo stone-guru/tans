@@ -7,12 +7,12 @@ import static org.junit.Assert.assertTrue;
 public class CounterTest {
     @Test
     public void test1(){
-        String[] keys = new String[]{"pig.id","star.id", "girl.id", "monkey.id", "actress.id", "object-id-1", "entity-id-75"};
+        String[] keys = new String[]{"pig.id","star.id", "girl.id", "monkey.id", "actress.id", "object-id-1", "entity-id-2", "army49.division952.soldier9.id"};
         System.out.println(Math.abs(Integer.MIN_VALUE));
         for(String k : keys){
             int c1 = k.hashCode();
             int c2 = (c1 < 0? -c1 : c1);
-            //System.out.println(String.format("key = %s, hashcode=%d, squad=%d", k, c2, c2%18));
+            System.out.println(String.format("key = %s, hashcode=%d, squad=%d", k, c2, c2%18));
         }
         assertTrue(1 == 1);
     }

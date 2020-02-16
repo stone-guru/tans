@@ -28,11 +28,6 @@ public class SquadContext {
         this.chosenBallotId = chosenBallotId;
         this.chosenProposal = proposal;
         this.chosenTimestamp = System.currentTimeMillis();
-
-        //if(logger.isTraceEnabled()){
-//            logger.trace("Record chosen info S{}, proposer {}, instance {}, ballotId {} at {}",
-//                    this.squadId, proposerId, chosenInstanceId, chosenBallotId, new Date(chosenTimestamp));
-        //}
     }
 
     public long chosenTimestamp(){
@@ -48,6 +43,12 @@ public class SquadContext {
         return (this.proposerId == config.serverId()) && !isLeaderLeaseExpired(System.currentTimeMillis());
     }
 
+    public int leaderId(){
+        if(!isLeaderLeaseExpired(System.currentTimeMillis())){
+            return this.proposerId;
+        }
+        return 0;
+    }
     public int squadId() {
         return this.squadId;
     }

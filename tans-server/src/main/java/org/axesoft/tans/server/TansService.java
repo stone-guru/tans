@@ -19,6 +19,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -99,9 +101,12 @@ public class TansService implements StateMachine, HasMetrics {
         }
 
         try {
-            resulFuture.get();
+            resulFuture.get(1, TimeUnit.SECONDS);
 
             return produceResult(requests, proposal.numbers);
+        }
+        catch(TimeoutException e){
+            throw new RuntimeException(e);
         }
         catch (InterruptedException e) {
             //logger.debug("Execution interrupted", e);

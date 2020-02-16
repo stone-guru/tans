@@ -37,12 +37,16 @@ public class Squad implements EventDispatcher {
         this.settings = settings;
         this.components = components;
         this.context = new SquadContext(squadId, this.settings);
-        this.metrics = components.getJaxosMetrics().getOrCreateSquadMetrics(squadId);
+
         this.stateMachineRunner = new StateMachineRunner(squadId, machine);
         this.proposer = new Proposer(this.settings, components, this.context, (Learner) stateMachineRunner);
         this.acceptor = new Acceptor(this.settings, components, this.context, (Learner) stateMachineRunner);
 
-        //indicate that there is no lear request sent
+        this.metrics = components.getJaxosMetrics().getOrCreateSquadMetrics(squadId);
+        this.metrics.createLeaderGaugeIfNotSet(() -> this.context.leaderId());
+        this.metrics.createInstanceIdGaugeIfNotSet(() -> this.context.chosenInstanceId());
+
+        //indicate that there is no learn request sent
         this.learnTimeout = null;
     }
 
@@ -157,7 +161,6 @@ public class Squad implements EventDispatcher {
             }
             case ACCEPTED_NOTIFY: {
                 acceptor.onChosenNotify(((Event.ChosenNotify) event));
-                this.metrics.recordLeader(event.senderId());
                 return null;
             }
             case PROPOSAL_TIMEOUT: {

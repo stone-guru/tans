@@ -1,5 +1,7 @@
 package org.axesoft.jaxos.algo;
 
+import java.util.function.Supplier;
+
 public interface SquadMetrics {
     enum ProposalResult {
         SUCCESS, CONFLICT, OTHER
@@ -8,6 +10,7 @@ public interface SquadMetrics {
     void recordPropose(long nanos, ProposalResult result);
     void recordLearnMillis(long millis);
     void recordTeachNanos(long nanos);
-    void recordLeader(int serverId);
     void incPeerTimeoutCounter();
+    void createLeaderGaugeIfNotSet(Supplier<Number> leaderSupplier);
+    void createInstanceIdGaugeIfNotSet(Supplier<Number> leaderSupplier);
 }

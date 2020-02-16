@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -68,7 +69,7 @@ public final class HttpApiService extends AbstractExecutionThreadService {
         this.tansService = tansService;
         this.config = config;
         this.threadPool = requestThreadPool;
-        this.metrics = new TansMetrics(config.serverId(), this.config.jaxConfig().partitionNumber(), this.tansService::keyCountOf);
+        this.metrics = new TansMetrics(config.serverId(), this.config.jaxConfig().partitionNumber(), this.tansService::keyCountOf, this.threadPool::queueSizeOf);
 
         super.addListener(new Listener() {
             @Override
@@ -407,12 +408,6 @@ public final class HttpApiService extends AbstractExecutionThreadService {
             try {
                 rx = tansService.acquire(squadId, kvx, ignoreLeader);
             }
-            catch (TerminatedException e) {
-                if (logRateLimiter.tryAcquire()) {
-                    logger.warn("Jaxos service stopped, ignore response");
-                }
-                return;
-            }
             catch (RedirectException e) {
                 otherLeaderId = e.getServerId();
                 HttpApiService.this.metrics.incRedirectCounter();
@@ -420,13 +415,28 @@ public final class HttpApiService extends AbstractExecutionThreadService {
             catch (ProposalConflictException e) {
                 errorResponse = createResponse(HttpResponseStatus.CONFLICT, "CONFLICT");
             }
-            catch (NoQuorumException e) {
-                errorResponse = createResponse(HttpResponseStatus.CONFLICT, "SERVICE UNAVAILABLE");
+            catch (TerminatedException e) {
+                if (logRateLimiter.tryAcquire()) {
+                    logger.info("Jaxos service stopped, ignore response");
+                }
+                return;
             }
-            catch (Exception e) {
-                logger.error("Process ", e);
+            catch (NoQuorumException e) {
+                errorResponse = createResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, "SERVICE UNAVAILABLE");
+            }
+            catch (RuntimeException e) {
+                if(e.getCause() instanceof TimeoutException){
+                    logger.warn("Acquire timeout", e);
+                    errorResponse = createResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, "SERVICE UNAVAILABLE");
+                } else {
+                    logger.error("Process ", e);
+                    errorResponse = createResponse(INTERNAL_SERVER_ERROR, "INTERNAL ERROR");
+                }
+            }catch(Throwable t){
+                logger.error("Process ", t);
                 errorResponse = createResponse(INTERNAL_SERVER_ERROR, "INTERNAL ERROR");
             }
+
 
             try {
                 long current = System.currentTimeMillis();

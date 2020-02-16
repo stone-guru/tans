@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 public class MicroMeterJaxosMetrics implements JaxosMetrics {
     private final int serverId;
@@ -114,6 +115,7 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
     private static class MicroMeterSquadMetrics implements SquadMetrics {
         private final int squadId;
 
+        private PrometheusMeterRegistry registry;
         private Counter proposeCounter;
         private Counter successCounter;
         private Counter conflictCounter;
@@ -123,10 +125,12 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
         private Timer acceptTimer;
         private Timer learnTimer;
         private Timer teachTimer;
-        private AtomicInteger leaderId;
+        private Gauge leaderGauge;
+        private Gauge instanceIdGauge;
 
         public MicroMeterSquadMetrics(int squadId, PrometheusMeterRegistry registry) {
             this.squadId = squadId;
+            this.registry = registry;
 
             this.proposeCounter = Counter.builder("propose.total")
                     .description("The total times of propose request")
@@ -173,14 +177,28 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
                     .description("The duration for prepare a learn response")
                     .tags("squad", Integer.toString(this.squadId)))
                     .register(registry);
-
-            this.leaderId = new AtomicInteger(0);
-            Gauge.builder("squad.leader", this.leaderId::get)
-                    .description("The leader id of this squad")
-                    .tags("squad", Integer.toString(this.squadId))
-                    .register(registry);
         }
 
+
+        @Override
+        public void createLeaderGaugeIfNotSet(Supplier<Number> leaderSupplier) {
+            if(this.leaderGauge == null){
+                this.leaderGauge = Gauge.builder("squad.leader", leaderSupplier)
+                        .description("The leader id of this squad")
+                        .tags("squad", Integer.toString(this.squadId))
+                        .register(registry);
+            }
+        }
+
+        @Override
+        public void createInstanceIdGaugeIfNotSet(Supplier<Number> leaderSupplier) {
+            if(this.instanceIdGauge == null){
+                this.instanceIdGauge = Gauge.builder("instance.id", leaderSupplier)
+                        .description("The chosen instance id of this squad")
+                        .tags("squad", Integer.toString(this.squadId))
+                        .register(registry);
+            }
+        }
 
         public void recordAccept(long nanos) {
             acceptTimer.record(nanos, TimeUnit.NANOSECONDS);
@@ -212,15 +230,9 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
         }
 
         @Override
-        public void recordLeader(int serverId) {
-            if (this.leaderId.get() != serverId) {
-                this.leaderId.set(serverId);
-            }
-        }
-
-        @Override
         public void incPeerTimeoutCounter() {
             this.peerTimeoutCounter.increment();
         }
+
     }
 }

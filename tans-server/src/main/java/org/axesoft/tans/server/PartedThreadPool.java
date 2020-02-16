@@ -30,6 +30,10 @@ public class PartedThreadPool implements RequestExecutor {
         });
     }
 
+    public int queueSizeOf(int i){
+        return this.executors[i].queueSize();
+    }
+
     private int totalExecTimes() {
         int t = 0;
         for (TansExecutor executor : this.executors) {
@@ -41,7 +45,7 @@ public class PartedThreadPool implements RequestExecutor {
     private int lastMinuteWaitingSize() {
         int t = 0;
         for (TansExecutor executor : this.executors) {
-            t = Math.max(executor.lastMinuteWaitingSize(), t);
+            t = Math.max(executor.queueSize(), t);
         }
         return t;
     }
@@ -77,8 +81,8 @@ public class PartedThreadPool implements RequestExecutor {
             return this.execTimes.get();
         }
 
-        private int lastMinuteWaitingSize() {
-            return this.waitingTaskCounter.getMax(0);
+        private int queueSize() {
+            return this.threadPool.getQueue().size();
         }
     }
 }

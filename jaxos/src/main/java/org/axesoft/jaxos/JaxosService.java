@@ -7,6 +7,7 @@ import io.netty.util.Timeout;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.tuple.Pair;
 import org.axesoft.jaxos.algo.*;
+import org.axesoft.jaxos.logger.MemoryAcceptorLogger;
 import org.axesoft.jaxos.logger.RocksDbAcceptorLogger;
 import org.axesoft.jaxos.algo.EventWorkerPool;
 import org.axesoft.jaxos.netty.NettyCommunicatorFactory;
@@ -46,14 +47,24 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
     private SquadSelector checkPointSquadSelector;
 
     public JaxosService(JaxosSettings settings, StateMachine stateMachine, RequestExecutor requestExecutor) {
-        checkArgument(settings.partitionNumber() >= 0, "Invalid partition number %d", settings.partitionNumber());
+        checkArgument(settings.partitionNumber() > 0, "Invalid partition number %d", settings.partitionNumber());
 
         this.settings = checkNotNull(settings, "The param settings is null");
         this.stateMachine = checkNotNull(stateMachine, "The param stateMachine is null");
         this.ballotIdHolder = new BallotIdHolder(this.settings.serverId());
         this.jaxosMetrics = new MicroMeterJaxosMetrics(this.settings.serverId());
-        this.acceptorLogger = new RocksDbAcceptorLogger(this.settings.dbDirectory(), this.settings.partitionNumber(),
-                this.settings.syncInterval().toMillis() < 100, jaxosMetrics);
+
+        if ("rocksdb".equals(settings.loggerImplementation())) {
+            this.acceptorLogger = new RocksDbAcceptorLogger(this.settings.dbDirectory(), this.settings.partitionNumber(),
+                    this.settings.syncInterval().toMillis() < 100, jaxosMetrics);
+        }
+        else if ("memory".equals(settings.loggerImplementation())) {
+            this.acceptorLogger = new MemoryAcceptorLogger(25000);
+        }
+        else {
+            throw new IllegalArgumentException("Unknown logger implementation '" + settings.loggerImplementation() + "'");
+        }
+
         this.requestExecutor = requestExecutor;
 
         this.components = new Components() {
@@ -128,7 +139,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         try {
             latch.await();
-            if(exceptionRef.get() != null){
+            if (exceptionRef.get() != null) {
                 throw new RuntimeException(exceptionRef.get());
             }
         }
@@ -138,7 +149,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         long elapsed = System.currentTimeMillis() - t0;
         this.jaxosMetrics.recordRestoreElapsedMillis(elapsed);
-        logger.info("Restore from DB in {} sec", String.format("%.3f", elapsed/1000.0));
+        logger.info("Restore from DB in {} sec", String.format("%.3f", elapsed / 1000.0));
     }
 
     @Override
@@ -271,9 +282,14 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
         final ListenableFuture<Void> future = this.propose(squadId, squads[squadId].lastChosenInstanceId() + 1, v, true);
 
         try {
-            future.get();
+            future.get(1, TimeUnit.SECONDS);
             if (logger.isDebugEnabled()) {
                 logger.debug("S{} got leader again", squadId);
+            }
+        }
+        catch (TimeoutException e) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("S{} propose for leader timeout", squadId);
             }
         }
         catch (InterruptedException e) {

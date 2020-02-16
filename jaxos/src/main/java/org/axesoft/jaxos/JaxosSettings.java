@@ -65,6 +65,7 @@ public class JaxosSettings {
         private Duration learnTimeout = Duration.ofMillis(1500);
         private long learnInstanceLimit = 50000;
         private long sendInstanceLimit = 20000;
+        private String loggerImplementation = "rocksdb";
 
         private Function<ByteString, String> valueVerboser;
 
@@ -155,6 +156,11 @@ public class JaxosSettings {
             return this;
         }
 
+        public Builder setLoggerImplementation(String loggerImplementation) {
+            this.loggerImplementation = loggerImplementation;
+            return this;
+        }
+
         public JaxosSettings build(){
             JaxosSettings config = new JaxosSettings();
             config.serverId = this.serverId;
@@ -174,6 +180,7 @@ public class JaxosSettings {
             config.learnTimeout = this.learnTimeout;
             config.learnInstanceLimit = this.learnInstanceLimit;
             config.sendInstanceLimit = this.sendInstanceLimit;
+            config.loggerImplementation = this.loggerImplementation;
             return config;
         }
     }
@@ -195,6 +202,7 @@ public class JaxosSettings {
     private long learnInstanceLimit = 50000;
     private long sendInstanceLimit = 20000;
     private Function<ByteString, String> valueVerboser;
+    private String loggerImplementation;
 
     private JaxosSettings() {
     }
@@ -283,6 +291,10 @@ public class JaxosSettings {
         return this.sendInstanceLimit;
     }
 
+    public String loggerImplementation(){
+        return this.loggerImplementation;
+    }
+
     @Override
     public String toString() {
         return "JaxosSettings{" +
@@ -301,6 +313,7 @@ public class JaxosSettings {
                 ", loggerSyncInterval=" + syncInterval +
                 ", learnInstanceLimit=" + learnInstanceLimit +
                 ", sendInstanceLimit=" + sendInstanceLimit +
+                ", loggerImplementation=" + loggerImplementation +
                 '}';
     }
 }
