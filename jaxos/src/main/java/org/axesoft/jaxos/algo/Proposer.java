@@ -1,6 +1,6 @@
 package org.axesoft.jaxos.algo;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import io.netty.util.Timeout;
 import org.axesoft.jaxos.JaxosSettings;
@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.BitSet;
 import java.util.ConcurrentModificationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -28,6 +29,7 @@ public class Proposer {
     private final Components config;
     private final Learner learner;
     private final ProposalNumHolder proposalNumHolder;
+    private final SquadMetrics metrics;
 
     private Timeout proposalTimeout;
     private PrepareActor prepareActor;
@@ -35,6 +37,7 @@ public class Proposer {
     private AcceptActor acceptActor;
     private Timeout acceptTimeout;
 
+    private long proposeStartTimestamp;
     private Event.BallotValue proposeValue;
     private long instanceId = 0;
     private int round = 0;
@@ -44,14 +47,17 @@ public class Proposer {
     private BitSet failingNodeIds;
     private int answerNodeCount;
 
-    private AtomicReference<SettableFuture<Void>> resultFutureRef;
+    private AtomicReference<CompletableFuture<ProposeResult<StateMachine.Snapshot>>> resultFutureRef;
 
-    public Proposer(JaxosSettings settings, Components config, SquadContext context, Learner learner) {
+    private Runnable proposeEndCallback;
+
+    public Proposer(JaxosSettings settings, Components components, SquadContext context, Learner learner, SquadMetrics metrics) {
         this.settings = settings;
-        this.config = config;
+        this.config = components;
         this.context = context;
         this.learner = learner;
         this.proposalNumHolder = new ProposalNumHolder(this.settings.serverId(), JaxosSettings.SERVER_ID_RANGE);
+        this.metrics = metrics;
 
         this.stage = Stage.NONE;
         this.prepareActor = new PrepareActor();
@@ -63,25 +69,36 @@ public class Proposer {
             this.allNodeIds.set(id);
         }
 
+
         this.resultFutureRef = new AtomicReference<>(null);
     }
 
-    public ListenableFuture<Void> propose(long instanceId, Event.BallotValue value, SettableFuture<Void> resultFuture) {
-        if (!resultFutureRef.compareAndSet(null, resultFuture)) {
-            String currentMsg = String.format("I%d %s", this.instanceId, this.proposeValue.toString());
-            String requestMsg = String.format("S%d I%d %s", context.squadId(), instanceId, value.toString());
-            resultFuture.setException(new ConcurrentModificationException("Previous propose not end (" + currentMsg +
-                    ") for " + requestMsg));
-            return resultFuture;
+    public void setProposeEndCallback(Runnable callback) {
+        this.proposeEndCallback = callback;
+    }
+
+
+
+    public void propose(Event.BallotValue value, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
+        synchronized (resultFutureRef) {
+            if (!resultFutureRef.compareAndSet(null, resultFuture)) {
+                String currentMsg = String.format("I%d %s", this.instanceId, this.proposeValue.toString());
+                String requestMsg = String.format("S%d I%d %s", context.squadId(), instanceId, value.toString());
+                resultFuture.completeExceptionally(new ConcurrentModificationException("Previous propose not end (" + currentMsg +
+                        ") for " + requestMsg));
+                return;
+            }
         }
 
         if (!config.getCommunicator().available()) {
-            return endAs(new CommunicatorException("Not enough server connected"));
+            endAs("Not enough server connected");
+            return;
         }
 
-        this.instanceId = instanceId;
+        this.instanceId = this.context.chosenInstanceId() + 1;
         this.proposeValue = value;
         this.round = 0;
+        this.proposeStartTimestamp = System.nanoTime();
 
         if (context.isLeader()) {
             startAccept(this.proposeValue, context.chosenProposal());
@@ -93,10 +110,16 @@ public class Proposer {
 
         this.proposalTimeout = config.getEventTimer().createTimeout(this.settings.wholeProposalTimeoutMillis(), TimeUnit.MILLISECONDS,
                 new Event.ProposalTimeout(this.settings.serverId(), this.context.squadId(), this.instanceId, 0));
-        return resultFuture;
     }
 
-    private ListenableFuture<Void> endAs(Throwable error) {
+
+    public boolean isRunning(){
+        synchronized (resultFutureRef) {
+            return resultFutureRef.get() != null;
+        }
+    }
+
+    private void endAs(String error) {
         this.stage = Stage.NONE;
         if (this.proposalTimeout != null) {
             this.proposalTimeout.cancel();
@@ -105,23 +128,33 @@ public class Proposer {
 
         if (logger.isTraceEnabled()) {
             logger.trace("S{}: Propose instance({}) end with {}",
-                    context.squadId(), this.instanceId, error == null ? "SUCCESS" : error.getMessage());
+                    context.squadId(), this.instanceId, error == null ? "SUCCESS" : error);
         }
-        SettableFuture<Void> future = this.resultFutureRef.get();
+        CompletableFuture<ProposeResult<StateMachine.Snapshot>> future = this.resultFutureRef.get();
         this.resultFutureRef.set(null);
 
+        long duration = System.nanoTime() - proposeStartTimestamp;
         if (error == null) {
-            future.set(null);
+            metrics.recordPropose(duration, SquadMetrics.ProposalResult.SUCCESS);
+            future.complete(ProposeResult.success(this.context.getStateMachineSnapshot()));
         }
         else {
-            future.setException(error);
+            if(error.startsWith("CONFLICT")){
+                metrics.recordPropose(duration, SquadMetrics.ProposalResult.CONFLICT);
+            } else {
+                metrics.recordPropose(duration, SquadMetrics.ProposalResult.OTHER);
+            }
+            future.complete(ProposeResult.fail(error));
         }
-        return future;
+
+        if(proposeEndCallback != null){
+            this.config.getWorkerPool().queueTask(this.context.squadId(), this.proposeEndCallback);
+        }
     }
 
     private boolean endWithMajorityCheck(int n, String step) {
         if (n <= this.settings.peerCount() / 2) {
-            endAs(new NoQuorumException("Not enough peers response at " + step));
+            endAs("Not enough peers response at " + step);
             return true;
         }
         return false;
@@ -129,7 +162,7 @@ public class Proposer {
 
     public void onProposalTimeout(Event.ProposalTimeout event) {
         if (this.stage != Stage.NONE && event.squadId() == context.squadId() && event.instanceId() == this.instanceId) {
-            endAs(new TimeoutException(String.format("S%d I%d whole proposal timeout", context.squadId(), this.instanceId)));
+            endAs(String.format("S%d I%d whole proposal timeout", context.squadId(), this.instanceId));
         }
         else if (logger.isDebugEnabled()) {
             logger.debug("Ignore unnecessary {}", event);
@@ -150,9 +183,9 @@ public class Proposer {
         }
 
         if (this.instanceId != i0.id() + 1) {
-            String msg = String.format("S%d when prepare instance %d while last chosen is %d",
+            String msg = String.format("CONFLICT S%d when prepare instance %d while last chosen is %d",
                     context.squadId(), instanceId, i0.id());
-            endAs(new ProposalConflictException(msg));
+            endAs(msg);
             return;
         }
 
@@ -228,7 +261,7 @@ public class Proposer {
                     endAs(null);
                 }
                 else {
-                    endAs(new ProposalConflictException(this.instanceId + " CONFLICT other value chosen"));
+                    endAs("CONFLICT " + this.instanceId + " other value chosen");
                 }
             }
             else {
@@ -263,9 +296,9 @@ public class Proposer {
         }
 
         if (this.instanceId != i0.id() + 1) {
-            String msg = String.format("when accept instance %d.%d while last chosen is %d",
+            String msg = String.format(" CONFLICT when accept instance %d.%d while last chosen is %d",
                     context.squadId(), instanceId, i0.id());
-            endAs(new ProposalConflictException(msg));
+            endAs(msg);
             return;
         }
         this.stage = Stage.ACCEPTING;
@@ -322,8 +355,8 @@ public class Proposer {
                 endAs(null);
             }
             else {
-                String msg = String.format("S%d I%d send other value at Accept", context.squadId(), this.instanceId);
-                endAs(new ProposalConflictException(msg));
+                String msg = String.format("CONFLICT S%d I%d send other value at Accept", context.squadId(), this.instanceId);
+                endAs(msg);
             }
         }
         else if (this.acceptActor.isInstanceChosen()) {
@@ -331,12 +364,12 @@ public class Proposer {
                 endAs(null);
             }
             else {
-                endAs(new ProposalConflictException("Chosen by other at accept"));
+                endAs("CONFLICT Chosen by other at accept");
             }
         }
         else {
             if (this.round >= 10000) {
-                endAs(new ProposalConflictException("REJECT at accept more than 100 times"));
+                endAs("CONFLICT REJECT at accept more than 100 times");
             }
             else {
                 sleepRandom(round, "ACCEPT");

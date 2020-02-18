@@ -1,0 +1,13 @@
+#/bin/sh
+SERVER=${1:-sheep1}
+DIR=target/tans-release-0.2-rc/tans-release-0.2/lib/
+
+echo "deploy to $SERVER"
+
+TANS_SERVER_JAR=$DIR/tans-server-0.2.jar
+JAXOS_JAR=$DIR/jaxos-0.2.jar
+
+TARGET_DIR=/home/bison/tans-release-0.2/lib/  
+
+scp $JAXOS_JAR bison@$SERVER:$TARGET_DIR
+scp $TANS_SERVER_JAR bison@$SERVER:$TARGET_DIR

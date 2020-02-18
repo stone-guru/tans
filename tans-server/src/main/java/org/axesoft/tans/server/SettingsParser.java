@@ -17,13 +17,15 @@ import java.util.stream.Collectors;
 public class SettingsParser {
     private Map<String, Object> yamlRoot;
     private JaxosSettings.Builder builder;
+    private TansConfig.Builder tansConfigBuilder;
+
     private ImmutableMap.Builder<Integer, Integer> peerHttpPortMapBuilder = ImmutableMap.builder();
     private Map<String, ItemParser> itemParserMap;
-    private int requestBatchSize = -1;
-    private String logHome = "./logs";
 
     public SettingsParser() {
         builder = JaxosSettings.builder();
+        tansConfigBuilder = TansConfig.builder();
+
         ItemParser[] items = new ItemParser[]{
                 new IntItemParser("core.id", i -> builder.setServerId(i), 1, 32),
                 new IntItemParser("core.partition.number", i -> builder.setPartitionNumber(i), 1, 64),
@@ -43,22 +45,21 @@ public class SettingsParser {
                 new DurationItemParser("learn.timeout", d -> builder.setLearnTimeout(d)),
                 new IntItemParser("learn.max-instance", i -> builder.setLearnInstanceLimit(i)),
                 new IntItemParser("learn.max-send", i -> builder.setSendInstanceLimit(i)),
-                new IntItemParser("tans.batch-size", i -> this.requestBatchSize = i, 1, 512),
-                new StringItemParser("tans.log-home", s -> this.logHome = s),
+                new IntItemParser("tans.batch-size", i -> tansConfigBuilder.setRequestBatchSize(i), 1, 512),
+                new IntItemParser("tans.netty.boss-thread-number", i -> tansConfigBuilder.setNettyBossThreadNumber(i), 1, 512),
+                new IntItemParser("tans.netty.worker-thread-number", i -> tansConfigBuilder.setNettyWorkerThreadNumber(i), 1, 512),
+                new StringItemParser("tans.log-home", s -> tansConfigBuilder.setLogHome(s)),
                 new PeerListParser("peers")
         };
 
         this.itemParserMap = Arrays.stream(items).collect(Collectors.toMap(ItemParser::itemName, i -> i));
     }
 
-    public JaxosSettings.Builder parse(InputStream is) {
+    public void parse(InputStream is) {
         yamlRoot = (Map<String, Object>) new Yaml().load(is);
 
 
         parseSegment(null, this.yamlRoot);
-
-
-        return this.builder;
     }
 
     public void parseString(String argName, String argValue) {
@@ -72,6 +73,12 @@ public class SettingsParser {
             }
             p.parseFromString(argValue);
         }
+    }
+
+    public TansConfig build(){
+        return tansConfigBuilder.setJaxosSettings(builder.build())
+                .setPeerHttpPorts(this.peerHttpPortMapBuilder.build())
+                .build();
     }
 
     public Set<String> argNames() {
@@ -113,23 +120,6 @@ public class SettingsParser {
 
     private String appendPrefixMaybe(String prefix, String s) {
         return prefix == null ? s : prefix + "." + s;
-    }
-
-    public JaxosSettings.Builder jaxosSettingsBuilder() {
-        return this.builder;
-    }
-
-    public Map<Integer, Integer> peerHttpPortMap() {
-        return this.peerHttpPortMapBuilder.build();
-    }
-
-
-    public int requestBatchSize() {
-        return this.requestBatchSize;
-    }
-
-    public String logHome(){
-        return this.logHome;
     }
 
     private static abstract class ItemParser {

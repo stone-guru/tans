@@ -25,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -34,7 +36,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  * An HTTP server that sends back the content of the received HTTP request
  * in a pretty plaintext form.
  */
-public final class HttpApiService extends AbstractExecutionThreadService {
+public class HttpApiService extends AbstractExecutionThreadService {
     private static final Logger logger = LoggerFactory.getLogger(HttpApiService.class);
 
     private static final String SERVICE_NAME = "Take-A-Number System";
@@ -128,8 +130,9 @@ public final class HttpApiService extends AbstractExecutionThreadService {
             }
         }, 1000, 1);
 
-        this.bossGroup = new NioEventLoopGroup(1);
-        this.workerGroup = new NioEventLoopGroup(3);
+        this.bossGroup = new NioEventLoopGroup(config.nettyBossThreadNumber());
+        this.workerGroup = new NioEventLoopGroup(config.nettyWorkerThreadNumber());
+
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
@@ -350,14 +353,14 @@ public final class HttpApiService extends AbstractExecutionThreadService {
         private final int waitingSize;
 
         private long t0;
-        private List<HttpAcquireRequest> tasks;
+        private List<HttpAcquireRequest> waitingTasks;
         private RateLimiter logRateLimiter;
 
         public RequestQueue(int squadId, int waitingSize) {
             this.squadId = squadId;
             this.waitingSize = waitingSize;
             this.t0 = 0;
-            this.tasks = new ArrayList<>(waitingSize);
+            this.waitingTasks = new ArrayList<>(waitingSize);
             this.logRateLimiter = RateLimiter.create(1.0 / 2.0);
         }
 
@@ -367,12 +370,12 @@ public final class HttpApiService extends AbstractExecutionThreadService {
             }
             HttpApiService.this.metrics.incRequestCount();
 
-            this.tasks.add(request);
-            if (this.tasks.size() == 1) {
+            this.waitingTasks.add(request);
+            if (this.waitingTasks.size() == 1) {
                 this.t0 = System.currentTimeMillis();
             }
 
-            if (tasks.size() >= waitingSize) {
+            if (waitingTasks.size() >= waitingSize) {
                 processRequests();
             }
         }
@@ -385,11 +388,12 @@ public final class HttpApiService extends AbstractExecutionThreadService {
         }
 
         private void processRequests() {
-            final List<HttpAcquireRequest> todo = ImmutableList.copyOf(this.tasks);
-            this.tasks.clear();
+            final List<HttpAcquireRequest> todo = ImmutableList.copyOf(this.waitingTasks);
+            this.waitingTasks.clear();
             this.t0 = 0;
 
-            threadPool.submit(this.squadId, () -> process(todo));
+            //threadPool.submit(this.squadId, () -> process(todo));
+            workerGroup.submit(() -> process(todo));
         }
 
         private void process(List<HttpAcquireRequest> tasks) {
@@ -402,75 +406,100 @@ public final class HttpApiService extends AbstractExecutionThreadService {
                 }
             }
 
-            List<LongRange> rx = null;
-            FullHttpResponse errorResponse = null;
-            int otherLeaderId = -1;
-            try {
-                rx = tansService.acquire(squadId, kvx, ignoreLeader);
-            }
-            catch (RedirectException e) {
-                otherLeaderId = e.getServerId();
-                HttpApiService.this.metrics.incRedirectCounter();
-            }
-            catch (ProposalConflictException e) {
-                errorResponse = createResponse(HttpResponseStatus.CONFLICT, "CONFLICT");
-            }
-            catch (TerminatedException e) {
-                if (logRateLimiter.tryAcquire()) {
-                    logger.info("Jaxos service stopped, ignore response");
-                }
-                return;
-            }
-            catch (NoQuorumException e) {
-                errorResponse = createResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, "SERVICE UNAVAILABLE");
-            }
-            catch (RuntimeException e) {
-                if(e.getCause() instanceof TimeoutException){
-                    logger.warn("Acquire timeout", e);
-                    errorResponse = createResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, "SERVICE UNAVAILABLE");
-                } else {
-                    logger.error("Process ", e);
-                    errorResponse = createResponse(INTERNAL_SERVER_ERROR, "INTERNAL ERROR");
-                }
-            }catch(Throwable t){
-                logger.error("Process ", t);
-                errorResponse = createResponse(INTERNAL_SERVER_ERROR, "INTERNAL ERROR");
-            }
-
-
-            try {
-                long current = System.currentTimeMillis();
-                for (int i = 0; i < kvx.size(); i++) {
-                    HttpAcquireRequest task = tasks.get(i);
-
-                    FullHttpResponse response;
-                    if (errorResponse != null) {
-                        response = errorResponse.retainedDuplicate();
-                    }
-                    else if (otherLeaderId >= 0) {
-                        response = createRedirectResponse(otherLeaderId, task.keyLong.key(), task.keyLong.value());
-                    }
-                    else {
-                        LongRange r = rx.get(i);
-                        String content = task.keyLong.key() + "," + r.low() + "," + r.high();
-                        response = createResponse(OK, content);
-                        if (logger.isTraceEnabled()) {
-                            logger.trace("S{} write response {},{},{},{}", squadId,
-                                    task.keyLong.key(), task.keyLong.value(), r.low(), r.high());
+            final long startMillis = System.currentTimeMillis();
+            tansService.acquire(squadId, kvx, ignoreLeader)
+                    .orTimeout(10, TimeUnit.SECONDS)
+                    .thenAcceptAsync(r -> {
+                        switch (r.code()) {
+                            case SUCCESS:
+                                onProcessSuccess(tasks, r.value(), startMillis);
+                                break;
+                            case REDIRECT:
+                                HttpApiService.this.metrics.incRedirectCounter();
+                                sendRedirect(tasks, r.redirectServerId());
+                                break;
+                            case ERROR:
+                                onProcessFailure(tasks, r.errorMessage());
                         }
-                    }
+                    }, workerGroup);
+        }
 
-                    writeResponse(task.ctx, task.keepAlive, response);
+        public void onProcessSuccess(List<HttpAcquireRequest> tasks, List<LongRange> result, long t0) {
+            for (int i = 0; i < tasks.size(); i++) {
+                HttpAcquireRequest task = tasks.get(i);
+                FullHttpResponse response;
+                LongRange r = result.get(i);
+                String content = task.keyLong.key() + "," + r.low() + "," + r.high();
+                response = createResponse(OK, content);
+                if (logger.isTraceEnabled()) {
+                    logger.trace("S{} write response {},{},{},{}", squadId,
+                            task.keyLong.key(), task.keyLong.value(), r.low(), r.high());
+                }
+                writeResponse(task.ctx, task.keepAlive, response);
 
-                    HttpApiService.this.metrics.recordRequestElapsed(current - task.timestamp);
-                }
-            }
-            finally {
-                if (errorResponse != null) {
-                    ReferenceCountUtil.release(errorResponse);
-                }
+                HttpApiService.this.metrics.recordRequestElapsed(t0 - task.timestamp);
             }
         }
-    }
 
+        public void onProcessFailure(List<HttpAcquireRequest> tasks, String  msg) {
+                FullHttpResponse errorResponse = createResponseForError(msg);
+                try {
+                    for (int i = 0; i < tasks.size(); i++) {
+                        HttpAcquireRequest task = tasks.get(i);
+                        FullHttpResponse response;
+                        response = errorResponse.retainedDuplicate();
+                        writeResponse(task.ctx, task.keepAlive, response);
+                    }
+                }
+                finally {
+                    ReferenceCountUtil.release(errorResponse);
+                }
+        }
+
+        private void sendRedirect(List<HttpAcquireRequest> tasks, int otherLeaderId) {
+            for (int i = 0; i < tasks.size(); i++) {
+                HttpAcquireRequest task = tasks.get(i);
+                FullHttpResponse response = createRedirectResponse(otherLeaderId, task.keyLong.key(), task.keyLong.value());
+                writeResponse(task.ctx, task.keepAlive, response);
+            }
+        }
+
+        private FullHttpResponse createResponseForError(String msg) {
+            return createResponse(INTERNAL_SERVER_ERROR, msg);
+
+//            if (t instanceof ProposalConflictException) {
+//                return createResponse(HttpResponseStatus.CONFLICT, "CONFLICT");
+//            }
+//            else if (t instanceof TerminatedException) {
+//                if (logRateLimiter.tryAcquire()) {
+//                    logger.info("Jaxos service stopped, ignore response");
+//                }
+//                return null;
+//            }
+//            else if (t instanceof NoQuorumException) {
+//                return createResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, "SERVICE UNAVAILABLE");
+//            }
+//            else if (t instanceof TimeoutException) {
+//                logger.warn("Acquire timeout", t);
+//                return createResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, "SERVICE UNAVAILABLE");
+//            }
+//            else if (t instanceof RuntimeException) {
+//                if (t.getCause() instanceof TimeoutException) {
+//                    logger.warn("Acquire timeout", t);
+//                    return createResponse(HttpResponseStatus.SERVICE_UNAVAILABLE, "SERVICE UNAVAILABLE");
+//                }
+//                else {
+//                    logger.error("Process ", t);
+//                    return createResponse(INTERNAL_SERVER_ERROR, "INTERNAL ERROR");
+//                }
+//            }
+//            else {
+//                logger.error("Process ", t);
+//                return createResponse(INTERNAL_SERVER_ERROR, "INTERNAL ERROR");
+//            }
+        }
+
+
+    }
 }
+

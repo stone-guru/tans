@@ -148,9 +148,16 @@ public class ClientApp {
                 for (int m = 0; m < k; m++) {
                     for (int i = 0; i < n; i++) {
                         count++;
-                        String key = "entity-id-" + (count % 5000);
+                        String key = "entity-id-" + (count % 2000);
                         Future<Range<Long>> future = client.acquire(key, 1 + (i % 10), this.ignoreLeader);
-                        Range<Long> r = future.get();
+                        Range<Long> r = null;
+                        try {
+                            r = future.get(1, TimeUnit.SECONDS);
+                        }
+                        catch (TimeoutException e) {
+                            System.out.println("Timeout when for acquire " + key);
+                            return;
+                        }
                         checker.accept(key, r.getMinimum(), r.getMaximum());
                         if (interval != 0  && count % interval == 0) {
                             System.out.println(String.format("[%s], %d, %s, %s", Thread.currentThread().getName(), count, key, r.toString()));

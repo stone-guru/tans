@@ -52,7 +52,7 @@ public class TansNumber {
         return this.value0;
     }
 
-    public TansNumber update(long v){
+    public TansNumber increase(long v){
         TansNumber n = new TansNumber(this.name, this.version + 1, System.currentTimeMillis(), this.value + v);
         n.value0 = this.value;
         n.version0 = this.version;

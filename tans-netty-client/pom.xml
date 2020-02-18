@@ -5,11 +5,11 @@
   <parent>
     <groupId>org.axesoft</groupId>
     <artifactId>tans-parent</artifactId>
-    <version>0.1</version>
+    <version>0.2</version>
   </parent>
 
   <groupId>org.axesoft</groupId>
   <artifactId>tans-netty-client</artifactId>
-  <version>0.1</version>
+  <version>0.2</version>
   <packaging>jar</packaging>
 </project>

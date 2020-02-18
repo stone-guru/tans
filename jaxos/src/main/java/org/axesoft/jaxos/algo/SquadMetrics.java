@@ -11,6 +11,7 @@ public interface SquadMetrics {
     void recordLearnMillis(long millis);
     void recordTeachNanos(long nanos);
     void incPeerTimeoutCounter();
+    void createProposeQueueSizeIfNotSet(Supplier<Number> sizeSupplier);
     void createLeaderGaugeIfNotSet(Supplier<Number> leaderSupplier);
     void createInstanceIdGaugeIfNotSet(Supplier<Number> leaderSupplier);
 }

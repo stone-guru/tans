@@ -5,12 +5,12 @@
   <parent>
     <groupId>org.axesoft</groupId>
     <artifactId>tans-parent</artifactId>
-    <version>0.1</version>
+    <version>0.2</version>
   </parent>
 
   <groupId>org.axesoft</groupId>
   <artifactId>tans-release</artifactId>
-  <version>0.1</version>
+  <version>0.2</version>
   <packaging>pom</packaging>
 
   <build>
@@ -40,17 +40,17 @@
     <dependency>
       <groupId>org.axesoft</groupId>
       <artifactId>jaxos</artifactId>
-      <version>0.1</version>
+      <version>0.2</version>
     </dependency>
     <dependency>
       <groupId>org.axesoft</groupId>
       <artifactId>tans-server</artifactId>
-      <version>0.1</version>
+      <version>0.2</version>
     </dependency>
     <dependency>
       <groupId>org.axesoft</groupId>
       <artifactId>tans-netty-client</artifactId>
-      <version>0.1</version>
+      <version>0.2</version>
     </dependency>
   </dependencies>
 </project>

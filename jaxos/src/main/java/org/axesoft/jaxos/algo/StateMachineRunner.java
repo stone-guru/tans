@@ -25,10 +25,6 @@ public class StateMachineRunner implements Learner {
         this.lastChosen = Instance.emptyOf(squadId);
     }
 
-    public StateMachine machine() {
-        return this.machine;
-    }
-
     public synchronized void restoreFromCheckPoint(CheckPoint checkPoint, List<Instance> ix) {
         if (!checkPoint.isEmpty()) {
             if(checkPoint.squadId() != this.squadId){

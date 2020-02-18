@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ServiceManager;
 import org.apache.commons.cli.*;
+import org.apache.commons.lang3.tuple.Pair;
 import org.axesoft.jaxos.JaxosService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,8 +25,8 @@ public class TansServerApp {
 
     private TansServerApp(TansConfig config) {
         this.config = config;
-        this.tansService = new TansService(config, () -> this.jaxosService);
-        this.requestThreadPool = new PartedThreadPool(this.config.jaxConfig().partitionNumber(), "Request Process Thread");
+        this.requestThreadPool = new PartedThreadPool(this.config.jaxConfig().partitionNumber()/3, "Request Process Thread");
+        this.tansService = new TansService(config, () -> this.jaxosService, this.requestThreadPool);
         this.jaxosService = new JaxosService(config.jaxConfig(), tansService, this.requestThreadPool);
         this.httpApiService = new HttpApiService(config, tansService, this.requestThreadPool);
         this.serviceManager = new ServiceManager(ImmutableList.of(this.jaxosService, this.httpApiService));
@@ -46,14 +47,16 @@ public class TansServerApp {
     }
 
     public static void main(String[] args) throws Exception {
-        TansConfig config = parseArgument(args);
+        Pair<String, TansConfig>  p = parseArgument(args);
+        TansConfig config = p.getRight();
 
         //For logback config file
         System.setProperty("SERVER_ID", Integer.toString(config.serverId()));
         System.setProperty("LOG_HOME", config.logHome());
 
         Logger logger = LoggerFactory.getLogger(TansServerApp.class);
-        logger.info("Starting TANS server {}", config.serverId());
+        logger.info("Starting TANS server {} using config file {}", config.serverId(), p.getLeft());
+        logger.info("Configuration is {}", config);
 
         TansServerApp app = new TansServerApp(config);
 
@@ -62,7 +65,7 @@ public class TansServerApp {
         app.start();
     }
 
-    private static TansConfig parseArgument(String[] args) throws FileNotFoundException, ParseException {
+    private static Pair<String, TansConfig> parseArgument(String[] args) throws FileNotFoundException, ParseException {
         Options options = new Options();
 
         options.addOption("c", "config-file", true, "config file");
@@ -78,7 +81,6 @@ public class TansServerApp {
 
         String configFile = getConfigFileName(cli.getOptionValue('c'));
 
-        System.out.println(String.format("Using config file '%s' for TANS ", configFile));
 
         parser.parse(new FileInputStream(configFile));
 
@@ -88,9 +90,7 @@ public class TansServerApp {
             }
         }
 
-        return new TansConfig(parser.jaxosSettingsBuilder().build(),
-                parser.peerHttpPortMap(),
-                parser.requestBatchSize(), parser.logHome());
+        return Pair.of(configFile, parser.build());
     }
 
     private static String getConfigFileName(String nameInArgument) {

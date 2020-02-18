@@ -118,6 +118,13 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
     }
 
     private void restoreFromDb() {
+        if ("memory".equals(settings.loggerImplementation())) {
+            logger.info("Initialize in memory log db");
+            return;
+        }
+
+        logger.info("Restore from DB at {}", settings.dbDirectory());
+
         long t0 = System.currentTimeMillis();
 
         AtomicReference<Exception> exceptionRef = new AtomicReference<>(null);
@@ -149,27 +156,25 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         long elapsed = System.currentTimeMillis() - t0;
         this.jaxosMetrics.recordRestoreElapsedMillis(elapsed);
-        logger.info("Restore from DB in {} sec", String.format("%.3f", elapsed / 1000.0));
+        logger.info("Restored from DB in {} sec", String.format("%.3f", elapsed / 1000.0));
     }
 
     @Override
-    public ListenableFuture<Void> propose(int squadId, long instanceId, ByteString v, boolean ignoreLeader) {
+    public CompletableFuture<ProposeResult<StateMachine.Snapshot>> propose(int squadId, ByteString v, boolean ignoreLeader) {
         long ballotId = ballotIdHolder.nextIdOf(squadId);
-        return propose(squadId, instanceId, new Event.BallotValue(ballotId, Event.ValueType.APPLICATION, v), ignoreLeader);
+        return propose(squadId, new Event.BallotValue(ballotId, Event.ValueType.APPLICATION, v), ignoreLeader);
     }
 
-    private ListenableFuture<Void> propose(int squadId, long instanceId, Event.BallotValue v, boolean ignoreLeader) {
+    private CompletableFuture<ProposeResult<StateMachine.Snapshot>> propose(int squadId, Event.BallotValue v, boolean ignoreLeader) {
         if (!this.isRunning()) {
-            return Futures.immediateFailedFuture(new TerminatedException(SERVICE_NAME + " is not running"));
+            return CompletableFuture.completedFuture(ProposeResult.fail(SERVICE_NAME + " is not running"));
         }
 
         checkArgument(squadId >= 0 && squadId < squads.length,
                 "Invalid squadId(%s) while partition number is %s ", squadId, squads.length);
 
-        SettableFuture<Void> resultFuture = SettableFuture.create();
-
-        eventWorkerPool.queueTask(squadId,
-                () -> this.squads[squadId].propose(instanceId, v, ignoreLeader, resultFuture));
+        CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture = new CompletableFuture<>();
+        this.eventWorkerPool.queueTask(squadId, () -> this.squads[squadId].propose(v, ignoreLeader, resultFuture));
 
         return resultFuture;
     }
@@ -273,35 +278,31 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
             logger.debug("S{} propose for leader", squadId);
         }
 
-        this.requestExecutor.submit(squadId, () -> execProposeForLeader(squadId));
+        //this.requestExecutor.submit(squadId, () -> execProposeForLeader(squadId));
+        this.eventWorkerPool.submitBackendTask(() -> execProposeForLeader(squadId));
     }
 
     private void execProposeForLeader(int squadId) {
         long ballotId = ballotIdHolder.nextIdOf(squadId);
         Event.BallotValue v = new Event.BallotValue(ballotId, Event.ValueType.NOTHING, ByteString.EMPTY);
-        final ListenableFuture<Void> future = this.propose(squadId, squads[squadId].lastChosenInstanceId() + 1, v, true);
-
-        try {
-            future.get(1, TimeUnit.SECONDS);
-            if (logger.isDebugEnabled()) {
-                logger.debug("S{} got leader again", squadId);
-            }
-        }
-        catch (TimeoutException e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("S{} propose for leader timeout", squadId);
-            }
-        }
-        catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
-        catch (ExecutionException e) {
-            if (logger.isDebugEnabled()) {
-                Throwable cause = e.getCause() == null ? e : e.getCause();
-                logger.debug("S{} Failed to be leader due to '{} {}'", squadId, cause, cause.getMessage());
-            }
-        }
+        this.propose(squadId, v, true)
+                .thenAccept(result -> {
+                    if (logger.isDebugEnabled()) {
+                        if (result.isSuccess()) {
+                            logger.debug("S{} got leader again", squadId);
+                        }
+                        else {
+                            logger.debug("S{} propose for leader failed");
+                        }
+                    }
+                })
+                .exceptionally(ex -> {
+                    if (logger.isDebugEnabled()) {
+                        Throwable cause = ex.getCause() == null ? ex : ex.getCause();
+                        logger.debug("S{} Failed to be leader due to '{} {}'", squadId, cause, cause.getMessage());
+                    }
+                    return null;
+                });
     }
 
     private void checkAndSaveCheckPoint() {
@@ -382,18 +383,6 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
             return r;
         }
 
-        private void startChosenQuery() {
-            this.squadInstanceMap.clear();
-            this.chosenQueryResponseCount = 0;
-
-            if (settings.peerCount() == 1) {
-                return;
-            }
-
-            components.getCommunicator().broadcastOthers(new Event.ChosenQuery(settings.serverId()));
-            this.chosenQueryTimeout = components.getEventTimer().createTimeout(500, TimeUnit.MILLISECONDS,
-                    new Event.ChosenQueryTimeout(settings.serverId()));
-        }
 
         private void onChosenQueryResponse(Event.ChosenQueryResponse response) {
             this.chosenQueryResponseCount++;
@@ -428,7 +417,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
         @Override
         public void running() {
             logger.info("{} {} started at port {}", SERVICE_NAME, settings.serverId(), settings.self().port());
-            logger.info("Using {} ", settings);
+            //logger.info("Using {} ", settings);
         }
 
         @Override

@@ -127,6 +127,7 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
         private Timer teachTimer;
         private Gauge leaderGauge;
         private Gauge instanceIdGauge;
+        private Gauge proposeQueueSizeGause;
 
         public MicroMeterSquadMetrics(int squadId, PrometheusMeterRegistry registry) {
             this.squadId = squadId;
@@ -234,5 +235,14 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
             this.peerTimeoutCounter.increment();
         }
 
+        @Override
+        public void createProposeQueueSizeIfNotSet(Supplier<Number> sizeSupplier) {
+            if(this.proposeQueueSizeGause == null){
+                this.proposeQueueSizeGause = Gauge.builder("propose.queue.size", sizeSupplier)
+                        .description("The waiting size of propose request of this squad")
+                        .tags("squad", Integer.toString(this.squadId))
+                        .register(registry);
+            }
+        }
     }
 }

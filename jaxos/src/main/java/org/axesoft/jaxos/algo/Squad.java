@@ -4,15 +4,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.*;
 import io.netty.util.Timeout;
 import org.axesoft.jaxos.JaxosSettings;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * A Squad is a composition of Proposer and Acceptor, and works as a individual paxos server.
@@ -21,6 +17,18 @@ import java.util.concurrent.TimeUnit;
  */
 public class Squad implements EventDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(Squad.class);
+
+    private static class ProposeRequest {
+        Event.BallotValue value;
+        boolean ignoreLeader;
+        CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture;
+
+        public ProposeRequest(Event.BallotValue value, boolean ignoreLeader, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
+            this.value = value;
+            this.ignoreLeader = ignoreLeader;
+            this.resultFuture = resultFuture;
+        }
+    }
 
     private Acceptor acceptor;
     private Proposer proposer;
@@ -33,18 +41,23 @@ public class Squad implements EventDispatcher {
     private Timeout learnTimeout;
     private long timestampOfLearnReq;
 
+    private BlockingQueue<ProposeRequest> proposeRequestQueue = new LinkedBlockingQueue<>(10 * 1024);
+
+
     public Squad(int squadId, JaxosSettings settings, Components components, StateMachine machine) {
         this.settings = settings;
         this.components = components;
-        this.context = new SquadContext(squadId, this.settings);
-
-        this.stateMachineRunner = new StateMachineRunner(squadId, machine);
-        this.proposer = new Proposer(this.settings, components, this.context, (Learner) stateMachineRunner);
-        this.acceptor = new Acceptor(this.settings, components, this.context, (Learner) stateMachineRunner);
+        this.context = new SquadContext(squadId, this.settings, machine);
 
         this.metrics = components.getJaxosMetrics().getOrCreateSquadMetrics(squadId);
-        this.metrics.createLeaderGaugeIfNotSet(() -> this.context.leaderId());
-        this.metrics.createInstanceIdGaugeIfNotSet(() -> this.context.chosenInstanceId());
+        this.metrics.createLeaderGaugeIfNotSet(this.context::leaderId);
+        this.metrics.createInstanceIdGaugeIfNotSet(this.context::chosenInstanceId);
+        this.metrics.createProposeQueueSizeIfNotSet(this.proposeRequestQueue::size);
+
+        this.stateMachineRunner = new StateMachineRunner(squadId, machine);
+        this.proposer = new Proposer(this.settings, components, this.context, (Learner) stateMachineRunner, this.metrics);
+        this.proposer.setProposeEndCallback(this::fireNextPropose);
+        this.acceptor = new Acceptor(this.settings, components, this.context, (Learner) stateMachineRunner);
 
         //indicate that there is no learn request sent
         this.learnTimeout = null;
@@ -70,20 +83,32 @@ public class Squad implements EventDispatcher {
      * @param v value to be proposed
      * @throws InterruptedException
      */
-    public ListenableFuture<Void> propose(long instanceId, Event.BallotValue v, boolean ignoreLeader, SettableFuture<Void> resultFuture) {
-        attachMetricsListener(resultFuture);
-
-        if (this.context.isOtherLeaderActive() && this.settings.leaderOnly() && !ignoreLeader) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("S{} I{} redirect to {}", context.squadId(), instanceId, this.context.lastProposer());
-            }
-            resultFuture.setException(new RedirectException(this.context.lastProposer()));
+    public void propose(Event.BallotValue v, boolean ignoreLeader, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
+        ProposeRequest request = new ProposeRequest(v, ignoreLeader, resultFuture);
+        if (proposeRequestQueue.offer(request)) {
+            components.getWorkerPool().queueTask(this.context.squadId(), this::fireNextPropose);
         }
         else {
-            proposer.propose(instanceId, v, resultFuture);
+            resultFuture.completeExceptionally(new RuntimeException("Waiting Queue full"));
         }
+    }
 
-        return resultFuture;
+    private void fireNextPropose() {
+        while (!proposer.isRunning()) {
+            ProposeRequest request = proposeRequestQueue.poll();
+            if (request == null) {
+                return;
+            }
+            if (this.context.isOtherLeaderActive() && this.settings.leaderOnly() && !request.ignoreLeader) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("S{} redirect to {}", context.squadId(), this.context.lastProposer());
+                }
+                request.resultFuture.complete(ProposeResult.redirectTo(this.context.lastProposer()));
+            }
+            else {
+                proposer.propose(request.value, request.resultFuture);
+            }
+        }
     }
 
     @Override
@@ -99,32 +124,6 @@ public class Squad implements EventDispatcher {
         else {
             throw new UnsupportedOperationException("Unknown event type of " + request.code());
         }
-    }
-
-    private void attachMetricsListener(ListenableFuture<Void> future) {
-        final long startNano = System.nanoTime();
-
-        Futures.addCallback(future, new FutureCallback<>() {
-            @Override
-            public void onSuccess(@Nullable Void result) {
-                record(SquadMetrics.ProposalResult.SUCCESS);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                if (t instanceof ProposalConflictException) {
-                    record(SquadMetrics.ProposalResult.CONFLICT);
-                }
-                else {
-                    record(SquadMetrics.ProposalResult.OTHER);
-                }
-            }
-
-            private void record(SquadMetrics.ProposalResult result) {
-                Squad.this.metrics.recordPropose(System.nanoTime() - startNano, result);
-            }
-
-        }, MoreExecutors.directExecutor());
     }
 
     public long lastChosenInstanceId() {
@@ -184,9 +183,10 @@ public class Squad implements EventDispatcher {
                 return null;
             }
             case LEARN_REQUEST: {
-                if(event.senderId() == this.settings.serverId()){
+                if (event.senderId() == this.settings.serverId()) {
                     logger.warn("S{} got learn request {} from self", this.context.squadId(), event);
-                } else {
+                }
+                else {
                     this.components.getWorkerPool().submitBackendTask(() -> this.onLearnRequest((Event.Learn) event));
                 }
                 return null;

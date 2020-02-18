@@ -8,8 +8,9 @@ import org.slf4j.LoggerFactory;
 public class SquadContext {
     private static final Logger logger = LoggerFactory.getLogger(SquadContext.class);
 
-    private JaxosSettings config;
-    private int squadId;
+    private final JaxosSettings config;
+    private final int squadId;
+    private final StateMachine stateMachine;
 
     private volatile int proposerId = 0;
     private volatile long chosenInstanceId = 0;
@@ -17,9 +18,10 @@ public class SquadContext {
     private volatile int chosenProposal = 0;
     private volatile long chosenTimestamp = 0;
 
-    public SquadContext(int squadId, JaxosSettings config) {
+    public SquadContext(int squadId, JaxosSettings config, StateMachine stateMachine) {
         this.config = config;
         this.squadId = squadId;
+        this.stateMachine = stateMachine;
     }
 
     public void recordChosenInfo(int proposerId, long chosenInstanceId, long chosenBallotId, int proposal){
@@ -71,5 +73,13 @@ public class SquadContext {
 
     public Event.ChosenInfo getLastChosenInfo(){
         return new Event.ChosenInfo(chosenInstanceId, chosenBallotId, System.currentTimeMillis() - chosenTimestamp);
+    }
+
+    public StateMachine stateMachine() {
+        return this.stateMachine;
+    }
+
+    public StateMachine.Snapshot getStateMachineSnapshot(){
+        return this.stateMachine.getSnapshot(this.squadId);
     }
 }

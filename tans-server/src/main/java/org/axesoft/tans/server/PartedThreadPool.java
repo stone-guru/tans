@@ -6,10 +6,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.axesoft.jaxos.RequestExecutor;
 import org.axesoft.jaxos.base.SlideWindowMetric;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PartedThreadPool implements RequestExecutor {
@@ -22,16 +19,22 @@ public class PartedThreadPool implements RequestExecutor {
         }
     }
 
+    public TansExecutor executorOf(int squadId){
+        int i = squadId % executors.length;
+        return executors[i];
+    }
+
     @Override
     public ListenableFuture<Void> submit(int i, Runnable r) {
-        return this.executors[i].submit(() -> {
+        return executorOf(i).submit(() -> {
             r.run();
             return null;
         });
     }
 
+
     public int queueSizeOf(int i){
-        return this.executors[i].queueSize();
+        return executorOf(i).queueSize();
     }
 
     private int totalExecTimes() {

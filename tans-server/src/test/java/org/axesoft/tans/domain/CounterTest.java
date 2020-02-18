@@ -2,27 +2,51 @@ package org.axesoft.tans.domain;
 
 import org.junit.Test;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.Assert.assertTrue;
 
 public class CounterTest {
     @Test
-    public void test1(){
-        String[] keys = new String[]{"pig.id","star.id", "girl.id", "monkey.id", "actress.id", "object-id-1", "entity-id-2", "army49.division952.soldier9.id"};
+    public void test1() {
+        String[] keys = new String[]{"pig.id", "star.id", "girl.id", "monkey.id", "actress.id", "object-id-1", "entity-id-2", "army49.division952.soldier9.id"};
         System.out.println(Math.abs(Integer.MIN_VALUE));
-        for(String k : keys){
+        for (String k : keys) {
             int c1 = k.hashCode();
-            int c2 = (c1 < 0? -c1 : c1);
-            System.out.println(String.format("key = %s, hashcode=%d, squad=%d", k, c2, c2%18));
+            int c2 = (c1 < 0 ? -c1 : c1);
+            System.out.println(String.format("key = %s, hashcode=%d, squad=%d", k, c2, c2 % 18));
         }
         assertTrue(1 == 1);
     }
 
     @Test
     public void testMask() throws Exception {
-        for(String s : new String[]{
+        for (String s : new String[]{
                 "$home/var", "$home_dir/var", "$homedir/abc"
         }) {
             System.out.println(s.replaceAll("\\$home\\b", System.getProperty("user.home")));
         }
+    }
+
+    @Test
+    public void testFuture() {
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+
+        future.completeOnTimeout(2, 500, TimeUnit.MILLISECONDS)
+                .thenAccept(i -> {
+                    System.out.println("Get value " + i);
+                });
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e) {
+                return;
+            }
+            future.complete(9);
+        }).run();
+
     }
 }

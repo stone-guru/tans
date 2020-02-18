@@ -165,6 +165,10 @@ public class JaxosSettings {
             JaxosSettings config = new JaxosSettings();
             config.serverId = this.serverId;
             config.peerMap = this.peerBuilder.build();
+            if(!config.peerMap.containsKey(config.serverId)){
+                throw new IllegalArgumentException("No peer config for self id = " + config.serverId);
+            }
+
             config.leaderOnly = this.leaderOnly;
             config.leaderLeaseSeconds = this.leaderLeaseSeconds;
             config.dbDirectory = this.dbDirectory;
@@ -181,6 +185,7 @@ public class JaxosSettings {
             config.learnInstanceLimit = this.learnInstanceLimit;
             config.sendInstanceLimit = this.sendInstanceLimit;
             config.loggerImplementation = this.loggerImplementation;
+
             return config;
         }
     }
@@ -203,6 +208,7 @@ public class JaxosSettings {
     private long sendInstanceLimit = 20000;
     private Function<ByteString, String> valueVerboser;
     private String loggerImplementation;
+
 
     private JaxosSettings() {
     }
@@ -294,6 +300,7 @@ public class JaxosSettings {
     public String loggerImplementation(){
         return this.loggerImplementation;
     }
+
 
     @Override
     public String toString() {

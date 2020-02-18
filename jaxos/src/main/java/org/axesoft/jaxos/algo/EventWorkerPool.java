@@ -14,7 +14,7 @@ import java.util.function.Supplier;
 public class EventWorkerPool implements EventTimer {
     private static Logger logger = LoggerFactory.getLogger(EventWorkerPool.class);
 
-    private static final int THREAD_QUEUE_CAPACITY = 10 * 1024;
+    private static final int THREAD_QUEUE_CAPACITY = 50 * 1024;
     private ExecutorService[] ballotExecutors;
     private Supplier<EventDispatcher> eventDispatcherSupplier;
     private HashedWheelTimer timer = new HashedWheelTimer(100, TimeUnit.MILLISECONDS);
@@ -46,6 +46,10 @@ public class EventWorkerPool implements EventTimer {
                     thread.setDaemon(true);
                     return thread;
                 });
+    }
+
+    public ExecutorService backendExecutor(){
+        return this.backendExecutor;
     }
 
     public void submitBackendTask(Runnable r){

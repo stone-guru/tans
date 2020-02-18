@@ -226,7 +226,11 @@ public class TansClientBootstrap {
                         ctx.writeAndFlush(request);
                         return;
                     }
-                    promises.poll().setFailure(new Exception(response.status().toString()));
+                    Promise<TansResult> p = promises.poll();
+                    if(p != null) {
+                        Exception e = new Exception(response.status().toString());
+                        p.setFailure(e);
+                    }
                 }
             }
         }
