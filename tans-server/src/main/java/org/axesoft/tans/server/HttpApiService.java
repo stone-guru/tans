@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.*;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -16,18 +17,13 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.axesoft.jaxos.JaxosSettings;
-import org.axesoft.jaxos.TerminatedException;
-import org.axesoft.jaxos.algo.NoQuorumException;
-import org.axesoft.jaxos.algo.ProposalConflictException;
-import org.axesoft.jaxos.algo.RedirectException;
+import org.axesoft.jaxos.algo.ProposeResult;
 import org.axesoft.jaxos.base.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -58,7 +54,6 @@ public class HttpApiService extends AbstractExecutionThreadService {
     private TansConfig config;
 
     private Channel serverChannel;
-    private PartedThreadPool threadPool;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
 
@@ -67,11 +62,10 @@ public class HttpApiService extends AbstractExecutionThreadService {
 
     private TansMetrics metrics;
 
-    public HttpApiService(TansConfig config, TansService tansService, PartedThreadPool requestThreadPool) {
+    public HttpApiService(TansConfig config, TansService tansService) {
         this.tansService = tansService;
         this.config = config;
-        this.threadPool = requestThreadPool;
-        this.metrics = new TansMetrics(config.serverId(), this.config.jaxConfig().partitionNumber(), this.tansService::keyCountOf, this.threadPool::queueSizeOf);
+        this.metrics = new TansMetrics(config.serverId(), this.config.jaxConfig().partitionNumber(), this.tansService::keyCountOf);
 
         super.addListener(new Listener() {
             @Override
@@ -166,8 +160,18 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
     }
 
-    private FullHttpResponse createResponse(HttpResponseStatus status, String v) {
-        return new DefaultFullHttpResponse(HTTP_1_1, status, Unpooled.copiedBuffer(v + "\r\n", CharsetUtil.UTF_8));
+    private static FullHttpResponse createResponse(ChannelHandlerContext ctx, HttpResponseStatus status, String... vx) {
+        ByteBuf buf;
+        if(vx == null || vx.length == 0){
+            buf = Unpooled.copiedBuffer("\r\n", CharsetUtil.UTF_8);
+        } else {
+            buf = ctx.alloc().directBuffer();
+            for(String s : vx){
+                buf.writeCharSequence(s, CharsetUtil.UTF_8);
+            }
+            buf.writeCharSequence("\r\n", CharsetUtil.UTF_8);
+        }
+        return new DefaultFullHttpResponse(HTTP_1_1, status, buf);
     }
 
     private FullHttpResponse createRedirectResponse(int serverId, String key, long n) {
@@ -201,7 +205,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
     }
 
-    public class HttpChannelHandler extends ChannelInboundHandlerAdapter {
+    public class HttpChannelHandler extends SimpleChannelInboundHandler {
         private HttpRequest request;
         private boolean keepAlive;
 
@@ -211,7 +215,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof HttpRequest) {
                 this.request = (HttpRequest) msg;
                 this.keepAlive = HttpUtil.isKeepAlive(request);
@@ -221,44 +225,38 @@ public class HttpApiService extends AbstractExecutionThreadService {
             }
 
             if (msg instanceof LastHttpContent) {
-                try {
-                    final String rawUrl = getRawUri(request.uri());
-                    if (ACQUIRE_PATH.equals(rawUrl)) {
-                        Either<String, HttpAcquireRequest> either = parseAcquireRequest(request, this.keepAlive, ctx);
-                        if (!either.isRight()) {
-                            writeResponse(ctx, keepAlive,
-                                    new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST,
-                                            Unpooled.copiedBuffer(either.getLeft(), CharsetUtil.UTF_8)));
-                            return;
-                        }
 
-                        HttpAcquireRequest httpAcquireRequest = either.getRight();
-                        if (logger.isTraceEnabled()) {
-                            logger.trace("Got request {}", httpAcquireRequest.keyLong);
-                        }
-                        int i = tansService.squadIdOf(httpAcquireRequest.keyLong.key());
-                        requestQueues[i].addRequest(httpAcquireRequest);
+                final String rawUrl = getRawUri(request.uri());
+                if (ACQUIRE_PATH.equals(rawUrl)) {
+                    Either<String, HttpAcquireRequest> either = parseAcquireRequest(request, this.keepAlive, ctx);
+                    if (!either.isRight()) {
+                        FullHttpResponse r = HttpApiService.createResponse(ctx, BAD_REQUEST,either.getLeft());
+                        writeResponse(ctx, keepAlive, r);
+                        return;
                     }
-                    else if (PARTITION_PATH.equals(rawUrl)) {
-                        String s = Integer.toString(config.jaxConfig().partitionNumber());
-                        writeResponse(ctx, keepAlive,
-                                new DefaultFullHttpResponse(HTTP_1_1, OK,
-                                        Unpooled.copiedBuffer(s + "\r\n", CharsetUtil.UTF_8)));
+
+                    HttpAcquireRequest httpAcquireRequest = either.getRight();
+                    if (logger.isTraceEnabled()) {
+                        logger.trace("Got request {}", httpAcquireRequest.keyLong);
                     }
-                    else if (METRICS_PATH.equals(rawUrl)) {
-                        String s1 = tansService.formatMetrics();
-                        String s2 = metrics.format();
-                        writeResponse(ctx, false,
-                                new DefaultFullHttpResponse(HTTP_1_1, OK, Unpooled.copiedBuffer(s1 + s2, CharsetUtil.UTF_8)));
-                    }
-                    else {
-                        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_FOUND,
-                                NOT_FOUND_BYTEBUF.retainedDuplicate());
-                        writeResponse(ctx, keepAlive, response);
-                    }
+                    int i = tansService.squadIdOf(httpAcquireRequest.keyLong.key());
+                    requestQueues[i].addRequest(httpAcquireRequest);
                 }
-                finally {
-                    ReferenceCountUtil.release(request);
+                else if (PARTITION_PATH.equals(rawUrl)) {
+                    String s = Integer.toString(config.jaxConfig().partitionNumber());
+                    FullHttpResponse r = HttpApiService.createResponse(ctx, OK, s, "\r\n");
+                    writeResponse(ctx, keepAlive, r);
+                }
+                else if (METRICS_PATH.equals(rawUrl)) {
+                    String s1 = tansService.formatMetrics();
+                    String s2 = metrics.format();
+                    FullHttpResponse r = HttpApiService.createResponse(ctx, OK, s1, s2);
+                    writeResponse(ctx, false, r);
+                }
+                else {
+                    FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_FOUND,
+                            NOT_FOUND_BYTEBUF.retainedDuplicate());
+                    writeResponse(ctx, keepAlive, response);
                 }
             }
         }
@@ -319,7 +317,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
 
         private void send100Continue(ChannelHandlerContext ctx) {
-            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER);
+            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER.retainedDuplicate());
             ctx.write(response);
         }
 
@@ -408,7 +406,6 @@ public class HttpApiService extends AbstractExecutionThreadService {
 
             final long startMillis = System.currentTimeMillis();
             tansService.acquire(squadId, kvx, ignoreLeader)
-                    .orTimeout(10, TimeUnit.SECONDS)
                     .thenAcceptAsync(r -> {
                         switch (r.code()) {
                             case SUCCESS:
@@ -429,8 +426,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 HttpAcquireRequest task = tasks.get(i);
                 FullHttpResponse response;
                 LongRange r = result.get(i);
-                String content = task.keyLong.key() + "," + r.low() + "," + r.high();
-                response = createResponse(OK, content);
+                response = createResponse(task.ctx, OK, task.keyLong.key(), ",", Long.toString(r.low()), ",", Long.toString(r.high()));
                 if (logger.isTraceEnabled()) {
                     logger.trace("S{} write response {},{},{},{}", squadId,
                             task.keyLong.key(), task.keyLong.value(), r.low(), r.high());
@@ -441,19 +437,12 @@ public class HttpApiService extends AbstractExecutionThreadService {
             }
         }
 
-        public void onProcessFailure(List<HttpAcquireRequest> tasks, String  msg) {
-                FullHttpResponse errorResponse = createResponseForError(msg);
-                try {
-                    for (int i = 0; i < tasks.size(); i++) {
-                        HttpAcquireRequest task = tasks.get(i);
-                        FullHttpResponse response;
-                        response = errorResponse.retainedDuplicate();
-                        writeResponse(task.ctx, task.keepAlive, response);
-                    }
-                }
-                finally {
-                    ReferenceCountUtil.release(errorResponse);
-                }
+        public void onProcessFailure(List<HttpAcquireRequest> tasks, String msg) {
+            for (int i = 0; i < tasks.size(); i++) {
+                HttpAcquireRequest task = tasks.get(i);
+                FullHttpResponse response = createResponseForError(msg, task.ctx);
+                writeResponse(task.ctx, task.keepAlive, response);
+            }
         }
 
         private void sendRedirect(List<HttpAcquireRequest> tasks, int otherLeaderId) {
@@ -464,8 +453,8 @@ public class HttpApiService extends AbstractExecutionThreadService {
             }
         }
 
-        private FullHttpResponse createResponseForError(String msg) {
-            return createResponse(INTERNAL_SERVER_ERROR, msg);
+        private FullHttpResponse createResponseForError(String msg, ChannelHandlerContext ctx) {
+            return createResponse(ctx, INTERNAL_SERVER_ERROR, msg);
 
 //            if (t instanceof ProposalConflictException) {
 //                return createResponse(HttpResponseStatus.CONFLICT, "CONFLICT");

@@ -11,9 +11,8 @@ message ProtoTansNumber {
 }
 
 message NumberProposal {
-  ProtoTansNumber number = 1;
-  int64 version0 = 5;
-  int64 value0 = 6;
+  string name = 1;
+  int64  value = 2;
 }
 
 message TansProposal {

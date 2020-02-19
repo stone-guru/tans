@@ -30,8 +30,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
 
     public ProtoMessageCoder() {
         codeDecodeMap = ImmutableBiMap.<PaxosMessage.Code, Event.Code>builder()
-                .put(PaxosMessage.Code.HEARTBEAT_REQ, Event.Code.HEART_BEAT)
-                .put(PaxosMessage.Code.HEARTBEAT_RES, Event.Code.HEART_BEAT_RESPONSE)
                 .put(PaxosMessage.Code.ACCEPT_REQ, Event.Code.ACCEPT)
                 .put(PaxosMessage.Code.ACCEPT_RES, Event.Code.ACCEPT_RESPONSE)
                 .put(PaxosMessage.Code.PREPARE_REQ, Event.Code.PREPARE)
@@ -40,8 +38,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
                 .put(PaxosMessage.Code.ACCEPTED_ACK, Event.Code.ACCEPTED_NOTIFY_RESPONSE)
                 .put(PaxosMessage.Code.LEARN_REQ, Event.Code.LEARN_REQUEST)
                 .put(PaxosMessage.Code.LEARN_RES, Event.Code.LEARN_RESPONSE)
-                .put(PaxosMessage.Code.CHOSEN_QUERY_REQ, Event.Code.CHOSEN_QUERY)
-                .put(PaxosMessage.Code.CHOSEN_QUERY_RES, Event.Code.CHOSEN_QUERY_RESPONSE)
                 .build();
         codeEncodeMap = codeDecodeMap.inverse();
 
@@ -59,12 +55,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     public PaxosMessage.DataGram encode(Event event) {
         ByteString body;
         switch (event.code()) {
-            case HEART_BEAT:
-            case HEART_BEAT_RESPONSE:
-            case CHOSEN_QUERY: {
-                body = ByteString.EMPTY;
-                break;
-            }
             case PREPARE: {
                 body = encodeBody((Event.PrepareRequest) event);
                 break;
@@ -93,10 +83,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
                 body = encodeBody((Event.LearnResponse) event);
                 break;
             }
-            case CHOSEN_QUERY_RESPONSE: {
-                body = encodeBody((Event.ChosenQueryResponse) event);
-                break;
-            }
             default: {
                 throw new UnsupportedOperationException();
             }
@@ -115,17 +101,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     }
 
 
-    private ByteString encodeBody(Event.ChosenQueryResponse event) {
-        return PaxosMessage.ChosenQueryRes.newBuilder()
-                .addAllChosen(event.squadChosen().stream()
-                        .map(p -> PaxosMessage.SquadChosen.newBuilder()
-                                .setSquadId(p.getKey())
-                                .setInstanceId(p.getValue())
-                                .build())
-                        .collect(Collectors.toList()))
-                .build()
-                .toByteString();
-    }
 
     private ByteString encodeBody(Event.PrepareRequest req) {
         return PaxosMessage.PrepareReq.newBuilder()
@@ -237,12 +212,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     public Event decode(PaxosMessage.DataGram dataGram) {
         try {
             switch (dataGram.getCode()) {
-                case HEARTBEAT_REQ: {
-                    return new Event.HeartBeatRequest(dataGram.getSender(), dataGram.getTimestamp());
-                }
-                case HEARTBEAT_RES: {
-                    return new Event.HeartBeatResponse(dataGram.getSender(), dataGram.getTimestamp());
-                }
                 case PREPARE_REQ: {
                     return decodePrepareReq(dataGram);
                 }
@@ -264,12 +233,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
                 case LEARN_RES: {
                     return decodeLearnResponse(dataGram);
                 }
-                case CHOSEN_QUERY_REQ: {
-                    return new Event.ChosenQuery(dataGram.getSender());
-                }
-                case CHOSEN_QUERY_RES: {
-                    return decodeChosenQueryResponse(dataGram);
-                }
                 default: {
                     logger.error("Unknown dataGram {}", dataGram);
                     return null;
@@ -281,13 +244,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
         }
     }
 
-    private Event decodeChosenQueryResponse(PaxosMessage.DataGram dataGram) throws InvalidProtocolBufferException {
-        PaxosMessage.ChosenQueryRes res = PaxosMessage.ChosenQueryRes.parseFrom(dataGram.getBody());
-        return new Event.ChosenQueryResponse(dataGram.getSender(),
-                res.getChosenList().stream()
-                        .map(c -> Pair.of(c.getSquadId(), c.getInstanceId()))
-                        .collect(Collectors.toList()));
-    }
 
     private Event decodePrepareReq(PaxosMessage.DataGram dataGram) throws InvalidProtocolBufferException {
         PaxosMessage.PrepareReq req = PaxosMessage.PrepareReq.parseFrom(dataGram.getBody());

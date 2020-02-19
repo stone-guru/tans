@@ -84,9 +84,6 @@ public class StateMachineRunner implements Learner {
         if (i.value().type() == Event.ValueType.APPLICATION) {
             this.machine.consume(squadId, i.id(), i.value().content());
         }
-        else {
-            this.machine.consume(squadId, i.id(), ByteString.EMPTY);
-        }
         this.lastChosen = i;
     }
 

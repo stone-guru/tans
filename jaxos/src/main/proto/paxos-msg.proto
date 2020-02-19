@@ -7,10 +7,7 @@ option java_outer_classname="PaxosMessage";
 
 enum Code {
   NONE = 0;
-  
-  HEARTBEAT_REQ = 1;
-  HEARTBEAT_RES = 2;
-  
+
   PREPARE_REQ = 3;
   PREPARE_RES = 4;
   ACCEPT_REQ = 5;
@@ -23,9 +20,6 @@ enum Code {
 
   LEARN_REQ = 11;
   LEARN_RES = 12;
-
-  CHOSEN_QUERY_REQ = 13;
-  CHOSEN_QUERY_RES = 14;
 }
 
 message DataGram {
@@ -99,15 +93,6 @@ message AcceptedNotify {
   int64 ballotId = 4;
 }
 
-message ChosenInstanceIdRes {
-  repeated ChosenInstanceId chosenInstance = 1;
-}
-
-message ChosenInstanceId {
-  int32 squadId = 1;
-  int64 chosenInstanceId = 2;
-}
-
 message LearnReq {
   int32 squadId = 1;
   int64 lowInstanceId = 2;
@@ -125,10 +110,6 @@ message Instance {
   int64 instanceId = 2;
   int32 proposal = 3;
   BallotValue value = 4;
-}
-
-message ChosenQueryRes {
-  repeated SquadChosen chosen = 1;
 }
 
 message SquadChosen {

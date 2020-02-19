@@ -46,7 +46,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
     private JaxosMetrics jaxosMetrics;
     private SquadSelector checkPointSquadSelector;
 
-    public JaxosService(JaxosSettings settings, StateMachine stateMachine, RequestExecutor requestExecutor) {
+    public JaxosService(JaxosSettings settings, StateMachine stateMachine) {
         checkArgument(settings.partitionNumber() > 0, "Invalid partition number %d", settings.partitionNumber());
 
         this.settings = checkNotNull(settings, "The param settings is null");
@@ -64,8 +64,6 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
         else {
             throw new IllegalArgumentException("Unknown logger implementation '" + settings.loggerImplementation() + "'");
         }
-
-        this.requestExecutor = requestExecutor;
 
         this.components = new Components() {
             @Override
@@ -336,28 +334,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         @Override
         public Event processEvent(Event event) {
-            switch (event.code()) {
-                case CHOSEN_QUERY: {
-                    return makeChosenQueryResponse();
-                }
-                case CHOSEN_QUERY_RESPONSE: {
-                    onChosenQueryResponse((Event.ChosenQueryResponse) event);
-                    if (this.chosenQueryResponseCount == settings.peerCount() - 1) {
-                        if (chosenQueryTimeout != null) {
-                            chosenQueryTimeout.cancel();
-                        }
-                        endChosenQueryResponse();
-                    }
-                    return null;
-                }
-                case CHOSEN_QUERY_TIMEOUT: {
-                    endChosenQueryResponse();
-                    return null;
-                }
-                default: {
-                    return getSquad(event).processEvent(event);
-                }
-            }
+            return getSquad(event).processEvent(event);
         }
 
         private Squad getSquad(Event event) {
@@ -367,48 +344,6 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
             }
             else {
                 throw new IllegalArgumentException("Invalid squadId in " + event.toString());
-            }
-        }
-
-        private Event.ChosenQueryResponse makeChosenQueryResponse() {
-            ImmutableList.Builder<Pair<Integer, Long>> builder = ImmutableList.builder();
-            for (int i = 0; i < JaxosService.this.squads.length; i++) {
-                builder.add(Pair.of(i, JaxosService.this.squads[i].lastChosenInstanceId()));
-            }
-            Event.ChosenQueryResponse r = new Event.ChosenQueryResponse(settings.serverId(), builder.build());
-
-            if (logger.isTraceEnabled()) {
-                logger.trace("Generate {}", r);
-            }
-            return r;
-        }
-
-
-        private void onChosenQueryResponse(Event.ChosenQueryResponse response) {
-            this.chosenQueryResponseCount++;
-            for (Pair<Integer, Long> p : response.squadChosen()) {
-                this.squadInstanceMap.merge(p.getKey(), Pair.of(response.senderId(), p.getRight()),
-                        (p0, p1) -> {
-                            if (p0.getRight() >= p1.getRight()) {
-                                return p0;
-                            }
-                            else {
-                                return p1;
-                            }
-                        });
-            }
-        }
-
-        private void endChosenQueryResponse() {
-            for (Map.Entry<Integer, Pair<Integer, Long>> entry : squadInstanceMap.entrySet()) {
-                int squadId = entry.getKey();
-                int serverId = entry.getValue().getKey();
-                long instanceId = entry.getValue().getValue();
-
-                Pair<Integer, Long> p = Pair.of(squadId, instanceId);
-                Event.ChosenQueryResponse response = new Event.ChosenQueryResponse(serverId, ImmutableList.of(p));
-                components.getWorkerPool().queueTask(0, () ->
-                        JaxosService.this.squads[squadId].processEvent(response));
             }
         }
     }

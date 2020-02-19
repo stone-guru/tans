@@ -50,9 +50,9 @@ save () {
     echo " "
 }
 APP_ARGS=$(save "$@")
-DEFAULT_JVM_OPTS='"-server" "-Xmx128m" "-XX:+UseG1GC" "-XX:+AlwaysPreTouch" "-XX:InitiatingHeapOccupancyPercent=60"'
+DEFAULT_JVM_OPTS='"-server" "-Xmx256m" "-XX:+UseG1GC" "-XX:+AlwaysPreTouch" "-XX:InitiatingHeapOccupancyPercent=60"'
 
-LIBS=("tans-netty-client-0.1" "netty-all-4.1.39.Final" "commons-cli-1.4" "commons-lang3-3.9" \
+LIBS=("tans-netty-client-0.2" "netty-all-4.1.42.Final" "commons-cli-1.4" "commons-lang3-3.9" \
       "guava-27.0.1-jre" "logback-core-1.2.3" "logback-classic-1.2.3" "slf4j-api-1.7.25" \
       "failureaccess-1.0.1")
 

@@ -11,13 +11,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public abstract class Event {
     public enum Code {
-        NOOP, HEART_BEAT, HEART_BEAT_RESPONSE,
         PROPOSAL_TIMEOUT,
         PREPARE, PREPARE_RESPONSE, PREPARE_TIMEOUT,
         ACCEPT, ACCEPT_RESPONSE, ACCEPT_TIMEOUT,
         ACCEPTED_NOTIFY, ACCEPTED_NOTIFY_RESPONSE,
         LEARN_REQUEST, LEARN_RESPONSE, LEARN_TIMEOUT,
-        CHOSEN_QUERY, CHOSEN_QUERY_RESPONSE, CHOSEN_QUERY_TIMEOUT
     }
 
     //FIXME refact to enum
@@ -50,37 +48,6 @@ public abstract class Event {
     public int squadId() {
         return -1;
     }
-
-    public static class HeartBeatRequest extends Event {
-        public HeartBeatRequest(int senderId) {
-            super(senderId);
-        }
-
-        public HeartBeatRequest(int senderId, long timestamp) {
-            super(senderId, timestamp);
-        }
-
-        @Override
-        public Code code() {
-            return Code.HEART_BEAT;
-        }
-    }
-
-    public static class HeartBeatResponse extends Event {
-        public HeartBeatResponse(int senderId, long timestamp) {
-            super(senderId, timestamp);
-        }
-
-        public HeartBeatResponse(int senderId) {
-            super(senderId);
-        }
-
-        @Override
-        public Code code() {
-            return Code.HEART_BEAT_RESPONSE;
-        }
-    }
-
 
     public static abstract class BallotEvent extends Event {
         private int squadId;
@@ -651,56 +618,6 @@ public abstract class Event {
         @Override
         public int squadId() {
             return this.squadId;
-        }
-    }
-
-    public static class ChosenQuery extends InstanceEvent {
-        public ChosenQuery(int senderId) {
-            super(senderId);
-        }
-
-        @Override
-        public Code code() {
-            return Code.CHOSEN_QUERY;
-        }
-    }
-
-    public static class ChosenQueryResponse extends InstanceEvent {
-        List<Pair<Integer, Long>> squadChosen;
-
-        public ChosenQueryResponse(int senderId, List<Pair<Integer, Long>> squadChosen) {
-            super(senderId);
-            this.squadChosen = squadChosen;
-        }
-
-        public List<Pair<Integer, Long>> squadChosen() {
-            return squadChosen;
-        }
-
-        public long chosenInstanceIdOf(int squadId) {
-            for (Pair<Integer, Long> p : squadChosen) {
-                if (p.getLeft() == squadId) {
-                    return p.getRight();
-                }
-            }
-            return 0;
-        }
-
-        @Override
-        public Code code() {
-            return Code.CHOSEN_QUERY_RESPONSE;
-        }
-    }
-
-    public static class ChosenQueryTimeout extends InstanceEvent {
-
-        public ChosenQueryTimeout(int senderId) {
-            super(senderId);
-        }
-
-        @Override
-        public Code code() {
-            return Code.CHOSEN_QUERY_TIMEOUT;
         }
     }
 }

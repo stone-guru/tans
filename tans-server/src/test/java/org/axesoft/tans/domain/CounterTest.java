@@ -33,10 +33,12 @@ public class CounterTest {
     public void testFuture() {
         CompletableFuture<Integer> future = new CompletableFuture<>();
 
-        future.completeOnTimeout(2, 500, TimeUnit.MILLISECONDS)
-                .thenAccept(i -> {
-                    System.out.println("Get value " + i);
-                });
+        CompletableFuture<Integer> f2 = future.completeOnTimeout(2, 500, TimeUnit.MILLISECONDS)
+                .thenApply(i -> i * 100);
+
+        f2.thenAccept(i -> {
+            System.out.println("Get value " + i);
+        });
 
         new Thread(() -> {
             try {
@@ -45,6 +47,8 @@ public class CounterTest {
             catch (InterruptedException e) {
                 return;
             }
+            System.out.println(future.isDone());
+            System.out.println(f2.isDone());
             future.complete(9);
         }).run();
 

@@ -78,7 +78,6 @@ public class Proposer {
     }
 
 
-
     public void propose(Event.BallotValue value, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
         synchronized (resultFutureRef) {
             if (!resultFutureRef.compareAndSet(null, resultFuture)) {
@@ -113,7 +112,7 @@ public class Proposer {
     }
 
 
-    public boolean isRunning(){
+    public boolean isRunning() {
         synchronized (resultFutureRef) {
             return resultFutureRef.get() != null;
         }
@@ -136,18 +135,21 @@ public class Proposer {
         long duration = System.nanoTime() - proposeStartTimestamp;
         if (error == null) {
             metrics.recordPropose(duration, SquadMetrics.ProposalResult.SUCCESS);
-            future.complete(ProposeResult.success(this.context.getStateMachineSnapshot()));
+            if (!future.complete(ProposeResult.success(this.context.getStateMachineSnapshot()))) {
+                logger.warn("S{} I{} proposes completed successfully but client cancelled it", this.context.squadId(), this.instanceId);
+            }
         }
         else {
-            if(error.startsWith("CONFLICT")){
+            if (error.startsWith("CONFLICT")) {
                 metrics.recordPropose(duration, SquadMetrics.ProposalResult.CONFLICT);
-            } else {
+            }
+            else {
                 metrics.recordPropose(duration, SquadMetrics.ProposalResult.OTHER);
             }
             future.complete(ProposeResult.fail(error));
         }
 
-        if(proposeEndCallback != null){
+        if (proposeEndCallback != null) {
             this.config.getWorkerPool().queueTask(this.context.squadId(), this.proposeEndCallback);
         }
     }

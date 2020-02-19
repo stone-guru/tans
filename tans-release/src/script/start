@@ -50,7 +50,7 @@ save () {
     echo " "
 }
 APP_ARGS=$(save "$@")
-DEFAULT_JVM_OPTS='"-server" "-Xmx4g" "-XX:+UseG1GC" "-XX:+AlwaysPreTouch" "-XX:InitiatingHeapOccupancyPercent=60"'
+DEFAULT_JVM_OPTS='"-server" "-Xmx3g" "-XX:+UseG1GC" "-XX:+AlwaysPreTouch" "-XX:InitiatingHeapOccupancyPercent=60"'
 
 # Collect all arguments for the java command, following the shell quoting and substitution rules
 eval set -- $DEFAULT_JVM_OPTS $JAVA_OPTS  -jar $APP_HOME/lib/tans-server-0.2.jar org.axesoft.tans.server.TansServerApp "$APP_ARGS"

@@ -24,7 +24,7 @@ public class TansMetrics {
     private Gauge uptimeGauge;
     private final long startTimestamp = System.currentTimeMillis();
 
-    public TansMetrics(int serverId, int squadCount, Function<Integer, Number> keyCountFunction, Function<Integer, Number> requestQueueSizeFunction) {
+    public TansMetrics(int serverId, int squadCount, Function<Integer, Number> keyCountFunction) {
         this.registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
         this.registry.config().commonTags("server", Integer.toString(serverId));
         new ClassLoaderMetrics().bindTo(registry);
@@ -56,14 +56,6 @@ public class TansMetrics {
             final int squadId = i;
             Gauge.builder("tans.key.count", () -> keyCountFunction.apply(squadId))
                     .description("The count of keys in squad " + squadId)
-                    .tag("squad", Integer.toString(squadId))
-                    .register(registry);
-        }
-
-        for(int i = 0; i < squadCount; i++) {
-            final int squadId = i;
-            Gauge.builder("tans.request.queue.size", () -> requestQueueSizeFunction.apply(squadId))
-                    .description("The size of request queue for squad " + squadId)
                     .tag("squad", Integer.toString(squadId))
                     .register(registry);
         }

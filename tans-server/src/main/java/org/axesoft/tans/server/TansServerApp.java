@@ -21,14 +21,12 @@ public class TansServerApp {
     private HttpApiService httpApiService;
     private TansService tansService;
     private ServiceManager serviceManager;
-    private PartedThreadPool requestThreadPool;
 
     private TansServerApp(TansConfig config) {
         this.config = config;
-        this.requestThreadPool = new PartedThreadPool(this.config.jaxConfig().partitionNumber()/3, "Request Process Thread");
-        this.tansService = new TansService(config, () -> this.jaxosService, this.requestThreadPool);
-        this.jaxosService = new JaxosService(config.jaxConfig(), tansService, this.requestThreadPool);
-        this.httpApiService = new HttpApiService(config, tansService, this.requestThreadPool);
+        this.tansService = new TansService(config, () -> this.jaxosService);
+        this.jaxosService = new JaxosService(config.jaxConfig(), tansService);
+        this.httpApiService = new HttpApiService(config, tansService);
         this.serviceManager = new ServiceManager(ImmutableList.of(this.jaxosService, this.httpApiService));
     }
 

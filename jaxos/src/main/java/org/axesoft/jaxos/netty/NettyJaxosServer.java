@@ -1,6 +1,7 @@
 package org.axesoft.jaxos.netty;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.*;
@@ -50,12 +51,11 @@ public class NettyJaxosServer {
             ServerBootstrap serverBootstrap = new ServerBootstrap()
                     .group(boss, worker)
                     .channel(NioServerSocketChannel.class)
-                    .option(ChannelOption.ALLOCATOR, UnpooledByteBufAllocator.DEFAULT)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
+                    .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
 
             serverBootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
                 protected void initChannel(SocketChannel socketChannel) throws Exception {
-                    socketChannel.config().setAllocator(UnpooledByteBufAllocator.DEFAULT);
+                    socketChannel.config().setAllocator(PooledByteBufAllocator.DEFAULT);
 
                     socketChannel.pipeline()
                             .addLast(new IdleStateHandler(20, 20, 20 * 10, TimeUnit.SECONDS))
@@ -89,8 +89,7 @@ public class NettyJaxosServer {
     }
 
     @ChannelHandler.Sharable
-    public class JaxosChannelHandler extends ChannelInboundHandlerAdapter {
-        private final PaxosMessage.DataGram heartBeatResponse = messageCoder.encode(new Event.HeartBeatResponse(settings.serverId()));
+    public class JaxosChannelHandler extends SimpleChannelInboundHandler<PaxosMessage.DataGram> {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -98,20 +97,13 @@ public class NettyJaxosServer {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof PaxosMessage.DataGram) {
-                Event e0 = messageCoder.decode((PaxosMessage.DataGram) msg);
-                if (e0.code() == Event.Code.HEART_BEAT) {
-                    //logger.info("Receive heart beat from server {}", e0.senderId());
-                    ctx.writeAndFlush(heartBeatResponse);
-                }
-                else {
-                    NettyJaxosServer.this.workerPool.submitEvent(e0, e1 -> {
-                        PaxosMessage.DataGram response = messageCoder.encode(e1);
-                        ctx.writeAndFlush(response);
-                    });
-                }
-            }
+        public void channelRead0(ChannelHandlerContext ctx, PaxosMessage.DataGram msg) throws Exception {
+            Event e0 = messageCoder.decode(msg);
+
+            NettyJaxosServer.this.workerPool.submitEvent(e0, e1 -> {
+                PaxosMessage.DataGram response = messageCoder.encode(e1);
+                ctx.writeAndFlush(response);
+            });
         }
 
         @Override

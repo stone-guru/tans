@@ -97,7 +97,11 @@ public class Squad implements EventDispatcher {
         while (!proposer.isRunning()) {
             ProposeRequest request = proposeRequestQueue.poll();
             if (request == null) {
-                return;
+                break;
+            }
+            //client can cancel the propose request due to timeout or other reason.
+            if(request.resultFuture.isDone()){
+                continue;
             }
             if (this.context.isOtherLeaderActive() && this.settings.leaderOnly() && !request.ignoreLeader) {
                 if (logger.isDebugEnabled()) {
@@ -174,14 +178,6 @@ public class Squad implements EventDispatcher {
 
     private Event processLearnerEvent(Event event) {
         switch (event.code()) {
-            case CHOSEN_QUERY_RESPONSE: {
-                long otherLast = ((Event.ChosenQueryResponse) event).chosenInstanceIdOf(context.squadId());
-                long last = this.lastChosenInstanceId();
-                if (last < otherLast - 1 && learnTimeout == null) {
-                    startLearn(event.senderId(), last, otherLast);
-                }
-                return null;
-            }
             case LEARN_REQUEST: {
                 if (event.senderId() == this.settings.serverId()) {
                     logger.warn("S{} got learn request {} from self", this.context.squadId(), event);

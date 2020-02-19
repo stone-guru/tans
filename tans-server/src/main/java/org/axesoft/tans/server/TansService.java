@@ -2,13 +2,10 @@ package org.axesoft.tans.server;
 
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.lang3.tuple.Pair;
 import org.axesoft.jaxos.algo.*;
-import org.axesoft.jaxos.base.Either;
 import org.axesoft.jaxos.base.LongRange;
 import org.axesoft.tans.protobuff.TansMessage;
 import org.pcollections.HashTreePMap;
@@ -21,10 +18,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -39,12 +32,10 @@ public class TansService implements StateMachine, HasMetrics {
 
     private TansNumberMap[] numberMaps;
     private Object[] machineLocks;
-    private PartedThreadPool partedThreadPool;
 
-    public TansService(TansConfig config, Supplier<Proponent> proponent, PartedThreadPool partedThreadPool) {
+    public TansService(TansConfig config, Supplier<Proponent> proponent) {
         this.proponent = checkNotNull(proponent);
         this.config = config;
-        this.partedThreadPool = partedThreadPool;
         this.numberMaps = new TansNumberMap[this.config.jaxConfig().partitionNumber()];
         this.machineLocks = new Object[this.config.jaxConfig().partitionNumber()];
         for (int i = 0; i < numberMaps.length; i++) {
@@ -67,11 +58,11 @@ public class TansService implements StateMachine, HasMetrics {
 
     @Override
     public void consume(int squadId, long instanceId, ByteString proposal) {
-        List<TansNumber> nx = proposal.isEmpty() ? Collections.emptyList() : fromProposal(proposal);
+        List<KeyLong> kx = proposal.isEmpty() ? Collections.emptyList() : fromProposal(proposal);
         if (logger.isTraceEnabled()) {
-            logger.trace("TANS state machine consume {} event from instance {}.{}", nx.size(), squadId, instanceId);
+            logger.trace("TANS state machine consume {} event from instance {}.{}", kx.size(), squadId, instanceId);
         }
-        this.numberMaps[squadId].consume(instanceId, nx);
+        this.numberMaps[squadId].consume(instanceId, kx);
     }
 
     @Override
@@ -99,40 +90,18 @@ public class TansService implements StateMachine, HasMetrics {
     }
 
     public CompletableFuture<ProposeResult<List<LongRange>>> acquire(int squadId, List<KeyLong> requests, boolean ignoreLeader) {
-        checkArgument(requests.size() > 0, "requests is empty");
+        if(requests.size() == 0){
+            return CompletableFuture.completedFuture(ProposeResult.success(ImmutableList.of()));
+        }
 
-        TansNumberProposal proposal;
-
-        proposal = this.numberMaps[squadId].createProposal(requests);
-        ByteString bx = toProposal(proposal.numbers);
+        ByteString bx = toProposal(requests);
 
         return proponent.get().propose(squadId, bx, ignoreLeader)
-                .thenApply(r -> r.map(snapshot ->  produceResult((TansNumberMapSnapShot)snapshot, requests)))
-                .exceptionally(ex -> ProposeResult.fail(ex.getClass().getName() + ": " +ex.getMessage()));
-
-
-//        return Futures.transform(resultFuture, snapshot -> produceResult((TansNumberMapSnapShot)snapshot, requests), this.partedThreadPool.executorOf(squadId));
-//
-//        try {
-//            StateMachine.Snapshot snapshot = resultFuture.get(1, TimeUnit.SECONDS);
-//            return produceResult((TansNumberMapSnapShot)snapshot, requests);
-//        }
-//        catch(TimeoutException e){
-//            throw new RuntimeException(e);
-//        }
-//        catch (InterruptedException e) {
-//            //logger.debug("Execution interrupted", e);
-//            Thread.currentThread().interrupt();
-//            throw new RuntimeException(e);
-//        }
-//        catch (ExecutionException e) {
-//            if (e.getCause() instanceof RuntimeException) {
-//                throw (RuntimeException) e.getCause();
-//            }
-//            else {
-//                throw new RuntimeException(e.getCause());
-//            }
-//        }
+                .thenApply(r -> r.map(snapshot -> produceResult((TansNumberMapSnapShot) snapshot, requests)))
+                .exceptionally(ex -> {
+                    logger.error("at TansService.acquire", ex);
+                    return ProposeResult.fail(ex.getClass().getName() + ": " + ex.getMessage());
+                });
     }
 
     private List<LongRange> produceResult(TansNumberMapSnapShot snapShot, List<KeyLong> requests) {
@@ -166,11 +135,11 @@ public class TansService implements StateMachine, HasMetrics {
 
     private static class TansNumberMapSnapShot implements StateMachine.Snapshot {
         private PMap<String, TansNumber> numbers;
-        private long lastInstanceId;
+        private long version;
 
-        public TansNumberMapSnapShot(PMap<String, TansNumber> numbers, long lastInstanceId) {
+        public TansNumberMapSnapShot(PMap<String, TansNumber> numbers, long version) {
             this.numbers = numbers;
-            this.lastInstanceId = lastInstanceId;
+            this.version = version;
         }
 
         public TansNumber get(String key) {
@@ -178,7 +147,7 @@ public class TansService implements StateMachine, HasMetrics {
         }
 
         public long version() {
-            return this.lastInstanceId;
+            return this.version;
         }
 
         public Collection<TansNumber> numbers() {
@@ -198,12 +167,12 @@ public class TansService implements StateMachine, HasMetrics {
             this.lastInstanceId = instanceId;
         }
 
-        synchronized void consume(long instanceId, List<TansNumber> nx) {
-            if (instanceId != this.lastInstanceId + 1) {
+        synchronized void consume(long instanceId, List<KeyLong> kx) {
+            if (instanceId <= this.lastInstanceId) {
                 throw new IllegalStateException(String.format("dolog %d when current is %d", instanceId, this.lastInstanceId));
             }
 
-            this.numbers = applyChange(nx, this.numbers);
+            this.numbers = applyChange(kx, this.numbers);
             this.lastInstanceId = instanceId;
         }
 
@@ -211,29 +180,22 @@ public class TansService implements StateMachine, HasMetrics {
             return new TansNumberMapSnapShot(this.numbers, this.lastInstanceId);
         }
 
-        private PMap<String, TansNumber> applyChange(List<TansNumber> nx, PMap<String, TansNumber> numbers0) {
+        private PMap<String, TansNumber> applyChange(List<KeyLong> kx, PMap<String, TansNumber> numbers0) {
             PMap<String, TansNumber> numbers1 = numbers0;
-            for (TansNumber n1 : nx) {
-                TansNumber n0 = numbers1.get(n1.name());
+            for (KeyLong k : kx) {
+                TansNumber n0 = numbers1.get(k.key());
                 if (n0 == null) {
-                    numbers1 = numbers1.plus(n1.name(), new TansNumber(n1.name(), n1.value() + 1));
+                    numbers1 = numbers1.plus(k.key(), new TansNumber(k.key(), k.value() + 1));
                 }
                 else {
-                    numbers1 = numbers1.plus(n0.name(), n0.increase(n1.value()));
+                    numbers1 = numbers1.plus(n0.name(), n0.increase(k.value()));
                 }
+
                 if (logger.isTraceEnabled()) {
-                    logger.trace("Statemachine apply change {}", n1);
+                    logger.trace("StateMachine apply change {}", k);
                 }
             }
             return numbers1;
-        }
-
-        private TansNumberProposal createProposal(List<KeyLong> requests) {
-            ImmutableList.Builder<TansNumber> builder = ImmutableList.builder();
-            for (KeyLong k : requests) {
-                builder.add(new TansNumber(k.key(), k.value()));
-            }
-            return new TansNumberProposal(this.lastInstanceId + 1, builder.build());
         }
 
         synchronized void transFromCheckPoint(long instanceId, List<TansNumber> nx) {
@@ -243,46 +205,21 @@ public class TansService implements StateMachine, HasMetrics {
         }
     }
 
-    private static class TansNumberProposal {
-        final long instanceId;
-        final List<TansNumber> numbers;
 
-        public TansNumberProposal(long instanceId, List<TansNumber> numbers) {
-            this.instanceId = instanceId;
-            this.numbers = numbers;
-        }
-
-        @Override
-        public String toString() {
-            return "TansNumberProposal{" +
-                    ", instanceId=" + instanceId +
-                    ", numbers=" + numbers +
-                    '}';
-        }
-    }
-
-
-    private static ByteString toProposal(List<TansNumber> nx) {
+    private static ByteString toProposal(List<KeyLong> kx) {
         TansMessage.TansProposal.Builder builder = TansMessage.TansProposal.newBuilder();
-        for (TansNumber n : nx) {
-            TansMessage.ProtoTansNumber.Builder nb = TansMessage.ProtoTansNumber.newBuilder()
-                    .setName(n.name())
-                    .setValue(n.value())
-                    .setVersion(n.version())
-                    .setTimestamp(n.timestamp());
+        for (KeyLong k : kx) {
+            TansMessage.NumberProposal.Builder b = TansMessage.NumberProposal.newBuilder()
+                    .setName(k.key())
+                    .setValue(k.value());
 
-            TansMessage.NumberProposal.Builder pb = TansMessage.NumberProposal.newBuilder()
-                    .setNumber(nb)
-                    .setVersion0(n.version0())
-                    .setValue0(n.value0());
-
-            builder.addProposal(pb);
+            builder.addProposal(b);
         }
 
         return builder.build().toByteString();
     }
 
-    private static List<TansNumber> fromProposal(ByteString message) {
+    private static List<KeyLong> fromProposal(ByteString message) {
         TansMessage.TansProposal proposal;
         try {
             proposal = TansMessage.TansProposal.parseFrom(message);
@@ -291,15 +228,9 @@ public class TansService implements StateMachine, HasMetrics {
             throw new RuntimeException(e);
         }
 
-        if (proposal.getProposalCount() == 0) {
-            throw new RuntimeException("Empty tans number list");
-        }
-
-        ImmutableList.Builder<TansNumber> builder = ImmutableList.builder();
-        for (TansMessage.NumberProposal np : proposal.getProposalList()) {
-            TansMessage.ProtoTansNumber n = np.getNumber();
-            builder.add(new TansNumber(n.getName(), n.getVersion(), n.getTimestamp(), n.getValue(),
-                    np.getVersion0(), np.getValue0()));
+        ImmutableList.Builder<KeyLong> builder = ImmutableList.builder();
+        for (TansMessage.NumberProposal p : proposal.getProposalList()) {
+            builder.add(new KeyLong(p.getName(), p.getValue()));
         }
 
         return builder.build();

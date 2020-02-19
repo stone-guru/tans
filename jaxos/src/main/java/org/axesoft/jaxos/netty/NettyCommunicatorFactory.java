@@ -129,7 +129,7 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
         private EventLoopGroup worker;
         private volatile boolean closed;
         private Map<Integer, ChannelId> channelIdMap = new ConcurrentHashMap<>();
-        private GroupedRateLimiter rateLimiter = new GroupedRateLimiter(1.0/15.0);
+        private GroupedRateLimiter rateLimiter = new GroupedRateLimiter(1.0 / 15.0);
 
         public ChannelGroupCommunicator(EventLoopGroup worker) {
             Bootstrap bootstrap;
@@ -140,7 +140,6 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
                         .option(ChannelOption.TCP_NODELAY, true)
                         .option(ChannelOption.SO_KEEPALIVE, true)
                         .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                        .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
                         .handler(new ChannelInitializer<SocketChannel>() {
                             @Override
                             protected void initChannel(SocketChannel socketChannel) throws Exception {
@@ -173,7 +172,7 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
         }
 
         private void connect(JaxosSettings.Peer peer) {
-            if(this.closed){
+            if (this.closed) {
                 return;
             }
 
@@ -217,8 +216,9 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
                         channelIdMap.put(peer.id(), c.id());
                     }
                 });
-            }catch(RejectedExecutionException e){
-                if(!this.closed){
+            }
+            catch (RejectedExecutionException e) {
+                if (!this.closed) {
                     logger.error("Unable to attach listener for connection when connect to " + peer, e);
                 }
             }
@@ -305,7 +305,7 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
 
     }
 
-    private class JaxosClientHandler extends ChannelInboundHandlerAdapter {
+    private class JaxosClientHandler extends SimpleChannelInboundHandler {
         private ChannelGroupCommunicator communicator;
 
         public JaxosClientHandler(ChannelGroupCommunicator communicator) {
@@ -318,7 +318,7 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
         }
 
         @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        public void channelRead0(ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof PaxosMessage.DataGram) {
                 PaxosMessage.DataGram dataGram = (PaxosMessage.DataGram) msg;
                 //this is an empty dataGram
@@ -329,24 +329,21 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
 
                 Event event = coder.decode(dataGram);
                 if (event != null) {
-                    if (event.code() == Event.Code.HEART_BEAT_RESPONSE) {
-                        //logger.info("Got heart beat response from server {}", event.senderId());
-                    }
-                    else {
-                        eventWorkerPool.submitEventToSelf(event);
-                    }
+                    eventWorkerPool.submitEventToSelf(event);
                 }
             }
             else {
-                logger.error("Unknown received object {}", msg);
+                String s = Objects.toString(msg);
+                logger.error("Unknown received object {}", s.substring(0, Integer.min(100, s.length())));
             }
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            if("Connection reset by peer".equals(cause.getMessage())){
+            if ("Connection reset by peer".equals(cause.getMessage())) {
                 logger.warn("Connection to {} reseted by peer", ctx.channel().attr(ATTR_PEER).get());
-            } else {
+            }
+            else {
                 logger.error("error ", cause);
             }
             ctx.close();
