@@ -6,6 +6,8 @@ public interface SquadMetrics {
     enum ProposalResult {
         SUCCESS, CONFLICT, OTHER
     }
+
+    void incProposeRequestCounter();
     void recordAccept(long nanos);
     void recordPropose(long nanos, ProposalResult result);
     void recordLearnMillis(long millis);

@@ -35,7 +35,8 @@
       </plugin>
     </plugins>
   </build>
-
+  
+  <dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -115,5 +116,6 @@
       <version>1.4</version>
       <scope>compile</scope>
     </dependency>
-    </dependencies>
+  </dependencies>
+  </dependencyManagement>
 </project>

@@ -84,6 +84,7 @@ public class Squad implements EventDispatcher {
      * @throws InterruptedException
      */
     public void propose(Event.BallotValue v, boolean ignoreLeader, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
+        this.metrics.incProposeRequestCounter();
         ProposeRequest request = new ProposeRequest(v, ignoreLeader, resultFuture);
         if (proposeRequestQueue.offer(request)) {
             components.getWorkerPool().queueTask(this.context.squadId(), this::fireNextPropose);
@@ -110,7 +111,13 @@ public class Squad implements EventDispatcher {
                 request.resultFuture.complete(ProposeResult.redirectTo(this.context.lastProposer()));
             }
             else {
-                proposer.propose(request.value, request.resultFuture);
+                boolean accepted = proposer.propose(request.value, request.resultFuture);
+                //In fact, not accepted should not happen if no bug
+                //If so, it means another caller call this function out of the workpool.event process thread
+                if(!accepted){
+                    proposeRequestQueue.offer(request);
+                    break;
+                }
             }
         }
     }

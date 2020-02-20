@@ -54,6 +54,7 @@ public class RocksDbAcceptorLogger implements AcceptorLogger {
         this.path = path;
         this.messageCoder = new ProtoMessageCoder();
         this.metrics = metrics;
+        this.metrics.setLoggerDiskSizeSupplierIfNot(this::getTotalFileSize);
         this.alwaysSync = alwaysSync;
 
         tryCreateDir(path);
@@ -330,5 +331,25 @@ public class RocksDbAcceptorLogger implements AcceptorLogger {
         key[0] = CATEGORY_PROMISE;
         System.arraycopy(Longs.toByteArray(i), 0, key, 1, 8);
         return key;
+    }
+
+    private Number getTotalFileSize(){
+        return folderSize(new File(this.path));
+    }
+
+    public static long folderSize(File directory) {
+        long length = 0;
+        File[] files = directory.listFiles();
+        if(files == null){
+            return 0;
+        }
+        for (File file : files){
+            if (file.isFile())
+                length += file.length();
+            else if (file.isDirectory()) {
+                length += folderSize(file);
+            }
+        }
+        return length;
     }
 }

@@ -66,47 +66,4 @@ public class AcceptorLoggerTest {
         assertEquals(101, p.proposal());
         assertEquals("Hello100", p.value().content().toStringUtf8());
     }
-
-    public static class DummyJaxosMetrics implements JaxosMetrics {
-
-        @Override
-        public SquadMetrics getOrCreateSquadMetrics(int squadId) {
-            return null;
-        }
-
-        @Override
-        public void recordRestoreElapsedMillis(long millis) {
-
-        }
-
-        @Override
-        public void recordLoggerLoadElapsed(long nanos) {
-
-        }
-
-        @Override
-        public void recordLoggerSaveElapsed(long nanos) {
-
-        }
-
-        @Override
-        public void recordLoggerSyncElapsed(long nanos) {
-
-        }
-
-        @Override
-        public void recordLoggerDeleteElapsed(long millis) {
-
-        }
-
-        @Override
-        public void recordLoggerSaveCheckPointElapse(long millis) {
-
-        }
-
-        @Override
-        public String format() {
-            return null;
-        }
-    }
 }

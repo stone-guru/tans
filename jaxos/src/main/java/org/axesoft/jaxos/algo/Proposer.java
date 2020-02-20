@@ -78,20 +78,19 @@ public class Proposer {
     }
 
 
-    public void propose(Event.BallotValue value, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
+    public boolean propose(Event.BallotValue value, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
         synchronized (resultFutureRef) {
             if (!resultFutureRef.compareAndSet(null, resultFuture)) {
                 String currentMsg = String.format("I%d %s", this.instanceId, this.proposeValue.toString());
                 String requestMsg = String.format("S%d I%d %s", context.squadId(), instanceId, value.toString());
-                resultFuture.completeExceptionally(new ConcurrentModificationException("Previous propose not end (" + currentMsg +
-                        ") for " + requestMsg));
-                return;
+                logger.error("S{} Previous propose not end ({}) for {}", context.squadId(), currentMsg, requestMsg);
+                return false;
             }
         }
 
         if (!config.getCommunicator().available()) {
             endAs("Not enough server connected");
-            return;
+            return true;
         }
 
         this.instanceId = this.context.chosenInstanceId() + 1;
@@ -109,6 +108,8 @@ public class Proposer {
 
         this.proposalTimeout = config.getEventTimer().createTimeout(this.settings.wholeProposalTimeoutMillis(), TimeUnit.MILLISECONDS,
                 new Event.ProposalTimeout(this.settings.serverId(), this.context.squadId(), this.instanceId, 0));
+
+        return true;
     }
 
 

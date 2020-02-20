@@ -12,7 +12,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 public class MicroMeterJaxosMetrics implements JaxosMetrics {
@@ -26,6 +25,7 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
     private Gauge restoreTimeGauge;
     private double restoreTimeSeconds;
     private Map<Integer, SquadMetrics> squadMetricsMap;
+    private Gauge loggerDiskSizeGauge;
 
     public MicroMeterJaxosMetrics(int serverId) {
         this.serverId = serverId;
@@ -77,6 +77,15 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
         this.loggerCheckPointTimer.record(nanos, TimeUnit.NANOSECONDS);
     }
 
+    @Override
+    public void setLoggerDiskSizeSupplierIfNot(Supplier<Number> f) {
+        if(loggerDiskSizeGauge == null){
+            this.loggerDiskSizeGauge = Gauge.builder("jaxos.logger.db.bytes", f)
+                    .description("The disk size of the jaxos logger")
+                    .register(registry);
+        }
+    }
+
     private static Timer.Builder setGlobalTimerConfigs(Timer.Builder builder) {
         return builder.publishPercentiles(0.5, 0.85, 0.99, 0.99)
                 .sla(Duration.ofMillis(3), Duration.ofMillis(10), Duration.ofMillis(50), Duration.ofMillis(100), Duration.ofSeconds(1))
@@ -85,23 +94,23 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
     }
 
     private void initLoggerMetrics() {
-        this.loggerLoadTimer = setGlobalTimerConfigs(Timer.builder("logger.load.duration")
+        this.loggerLoadTimer = setGlobalTimerConfigs(Timer.builder("jaxos.logger.load.duration")
                 .description("The time for each propose"))
                 .register(registry);
 
-        this.loggerSaveTimer = setGlobalTimerConfigs(Timer.builder("logger.save.duration")
+        this.loggerSaveTimer = setGlobalTimerConfigs(Timer.builder("jaxos.logger.save.duration")
                 .description("The time for each propose"))
                 .register(registry);
 
-        this.loggerSyncTimer = setGlobalTimerConfigs(Timer.builder("logger.sync.duration")
+        this.loggerSyncTimer = setGlobalTimerConfigs(Timer.builder("jaxos.logger.sync.duration")
                 .description("The time for each propose"))
                 .register(registry);
 
-        this.loggerDeleteTimer = setGlobalTimerConfigs(Timer.builder("logger.delete.duration")
+        this.loggerDeleteTimer = setGlobalTimerConfigs(Timer.builder("jaxos.logger.delete.duration")
                 .description("The time for each propose"))
                 .register(registry);
 
-        this.loggerCheckPointTimer = setGlobalTimerConfigs(Timer.builder("logger.checkPoint.duration")
+        this.loggerCheckPointTimer = setGlobalTimerConfigs(Timer.builder("jaxos.logger.checkPoint.duration")
                 .description("The time for saving checkpoint"))
                 .distributionStatisticExpiry(Duration.ofMillis(10))
                 .distributionStatisticBufferLength(3)
@@ -117,6 +126,7 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
 
         private PrometheusMeterRegistry registry;
         private Counter proposeCounter;
+        private Counter proposeRequestCounter;
         private Counter successCounter;
         private Counter conflictCounter;
         private Counter otherCounter;
@@ -127,11 +137,16 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
         private Timer teachTimer;
         private Gauge leaderGauge;
         private Gauge instanceIdGauge;
-        private Gauge proposeQueueSizeGause;
+        private Gauge proposeQueueSizeGauge;
 
         public MicroMeterSquadMetrics(int squadId, PrometheusMeterRegistry registry) {
             this.squadId = squadId;
             this.registry = registry;
+
+            this.proposeRequestCounter = Counter.builder("propose.request.count")
+                    .description("The counter of propose request")
+                    .tags("squad", Integer.toString(this.squadId))
+                    .register(registry);
 
             this.proposeCounter = Counter.builder("propose.total")
                     .description("The total times of propose request")
@@ -201,10 +216,17 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
             }
         }
 
+        @Override
         public void recordAccept(long nanos) {
             acceptTimer.record(nanos, TimeUnit.NANOSECONDS);
         }
 
+        @Override
+        public void incProposeRequestCounter() {
+            this.proposeRequestCounter.increment();
+        }
+
+        @Override
         public void recordPropose(long nanos, SquadMetrics.ProposalResult result) {
             proposeCounter.increment();
             proposeTimer.record(nanos, TimeUnit.NANOSECONDS);
@@ -237,8 +259,8 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
 
         @Override
         public void createProposeQueueSizeIfNotSet(Supplier<Number> sizeSupplier) {
-            if(this.proposeQueueSizeGause == null){
-                this.proposeQueueSizeGause = Gauge.builder("propose.queue.size", sizeSupplier)
+            if(this.proposeQueueSizeGauge == null){
+                this.proposeQueueSizeGauge = Gauge.builder("propose.queue.size", sizeSupplier)
                         .description("The waiting size of propose request of this squad")
                         .tags("squad", Integer.toString(this.squadId))
                         .register(registry);

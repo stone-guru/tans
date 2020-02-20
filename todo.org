@@ -1,0 +1,70 @@
+# Jaxos tasks
+* DONE Implement broadcast by netty.channelgroup 						     :network:
+* DONE Adopt JCommand to parse the settings from args 							:base:
+* DONE client close network gracefully 								     :network:
+* DONE use ProtoBuff.ByteString to store the general value 						:base:
+* DONE Proposal judge the majority 									:algo:
+* DONE implement basic multi-paxos.instance 								:algo:
+** DONE acceptor and adaptor use same instance context		  :algo:
+* DONE save proposal to localdb 									 :log:
+* DONE add accepted message 									     :network:
+* DONE add single learn request&response 							     :learner:
+* DONE add range learn request&response 							     :learner:
+* DONE add general state machine 								:statemachine:
+* DONE save checkpoint 										:statemachine:
+* DONE add log reload 											 :log:
+* DONE optimize the thread model 									:base:
+* DONE support timeout by TimeWheel 								     :network:
+* DONE set a fixed gradle version 									 :dev:
+* DONE use settings file for peers' address 								:base:
+* DONE connect to other peers lazily 								     :network:
+* DONE use netty local chanel to unify the broachcast interface 				     :network:
+  The notify message to local acceptor is by direct call, all others 
+are by netty
+* DONE Implment a distributed KV store based on berkely DB 					 :application:
+* DONE the ballot is not reset after one instance finished 						:base:
+* DONE close DB when application exit 									 :log:
+* DONE [#C] the proposer blocked at "executingSignal" 							:base:
+* DONE Implement a HTTP id service for each server 							:base:
+* DONE implement a HTTP client on netty 							     :network:
+* DONE Provide proposal BATCH strategy to improve the throughput 					:algo:
+* DONE Ignore Exceptions from channel broken when shudown the server 				     :network:
+* DONE A case of Chosen notify message lost making that server hang				     :network:
+* TODO Add full unit test case for algo package 							:algo:
+* DONE Add reject strategy for HTTP API server when not leader 					     :network:
+* DONE TANS service handle HTTP request in async way 						     :network:
+* DONE Add metrics for acceptor 									:algo:
+* DONE metrics of process rate of TANS service should in each seconds 				     :network:
+* DONE Add metrics for logger 										 :log:
+* TODO add ring cache to logger 									 :log:
+* DONE delete logs after checkpoint created 								 :log:
+* DONE proposal give each value a unique message id for handling conflict 				:algo:
+* CANCELLED Improve the Velometer component, let compute return pair of (t, elapsed)		     :metrics:
+  - State "CANCELLED"  from "TODO"       [2020-01-08 Wed 16:07] \\
+    use micrometer instead
+* DONE send checkpoint to learner if required logs were deleted					     :learner:
+* TODO Change HTTP response format from text to JSON 						 :application:
+* DONE Add ignore leader parameter to HTTP request						 :application:
+* DONE Metrics support Promethus								     :metrics:
+* DONE When a node crashed, other node should be leader of its partition 				:algo:
+* TODO nextProposal function of 201 should get 203 if sever id is 3					:algo:
+* TODO The ballot number may grow up to excced the limit of integer					:algo:
+* TODO Add token for protocol interfaces							     :network:
+* TODO Add user and password for HTTP API							     :network:
+* DONE Change config file from properties format to YAML format :application:
+* TODO add metrics for size rocksdb file
+* TODO add individual metrics for rate of propose request, besides executed propose
+* DONE use fully PooledDirectBuff for all network interfaces	    :network:
+* DONE change build tool from gradle to maven				:dev:
+* TODO the last saved instance should be confirmed again after restarting :algo:
+* Issues
+** TODO [#C] Netty print ERROR message [[file:caselog/netty-error.log][logs]]
+** TODO client hang when getting redirect to a not given server address 			      :client:
+** DONE conflict propose cause some log dropped [[file:caselog/version-error.log][version error]] 						:algo:
+** TODO sometime, raised an exception of *Propose not end*, and most after save checkpoint [[file:caselog/propose-not-end.log][log]] 		:algo:
+** DONE app's virt memory grow to more 20G , while res is several m only and Xmx is set to 1G		:base:
+   It's issue of leveldbjni package and solved by change log lib to RocksDB
+
+* Release
+** DONE change config name of "db.implementation" to "db.backend"
+** DONE change deploy nodes from 1,2,3 to 2,3,4

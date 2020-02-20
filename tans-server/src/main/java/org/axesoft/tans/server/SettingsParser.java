@@ -41,7 +41,7 @@ public class SettingsParser {
                 new IntItemParser("db.checkpoint.minutes", i -> builder.setCheckPointMinutes(i)),
                 new StringItemParser("db.path", s -> builder.setDbDirectory(s)),
                 new DurationItemParser("db.sync", d -> builder.setSyncInterval(d)),
-                new StringItemParser("db.implementation", s -> builder.setLoggerImplementation(s)),
+                new StringItemParser("db.backend", s -> builder.setLoggerImplementation(s)),
                 new DurationItemParser("learn.timeout", d -> builder.setLearnTimeout(d)),
                 new IntItemParser("learn.max-instance", i -> builder.setLearnInstanceLimit(i)),
                 new IntItemParser("learn.max-send", i -> builder.setSendInstanceLimit(i)),

@@ -169,7 +169,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
             for(String s : vx){
                 buf.writeCharSequence(s, CharsetUtil.UTF_8);
             }
-            buf.writeCharSequence("\r\n", CharsetUtil.UTF_8);
+            //buf.writeCharSequence("\r\n", CharsetUtil.UTF_8);
         }
         return new DefaultFullHttpResponse(HTTP_1_1, status, buf);
     }
@@ -244,7 +244,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 }
                 else if (PARTITION_PATH.equals(rawUrl)) {
                     String s = Integer.toString(config.jaxConfig().partitionNumber());
-                    FullHttpResponse r = HttpApiService.createResponse(ctx, OK, s, "\r\n");
+                    FullHttpResponse r = HttpApiService.createResponse(ctx, OK, s);
                     writeResponse(ctx, keepAlive, r);
                 }
                 else if (METRICS_PATH.equals(rawUrl)) {
@@ -426,7 +426,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 HttpAcquireRequest task = tasks.get(i);
                 FullHttpResponse response;
                 LongRange r = result.get(i);
-                response = createResponse(task.ctx, OK, task.keyLong.key(), ",", Long.toString(r.low()), ",", Long.toString(r.high()));
+                response = createResponse(task.ctx, OK, task.keyLong.key(), ",", Long.toString(r.low()), ",", Long.toString(r.high()), "\r\n");
                 if (logger.isTraceEnabled()) {
                     logger.trace("S{} write response {},{},{},{}", squadId,
                             task.keyLong.key(), task.keyLong.value(), r.low(), r.high());
