@@ -3,15 +3,16 @@ package org.axesoft.jaxos;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.*;
 import com.google.protobuf.ByteString;
-import io.netty.util.Timeout;
 import org.apache.commons.lang3.Range;
-import org.apache.commons.lang3.tuple.Pair;
 import org.axesoft.jaxos.algo.*;
+import org.axesoft.jaxos.base.GroupedRateLimiter;
+import org.axesoft.jaxos.base.NumberedThreadFactory;
 import org.axesoft.jaxos.logger.MemoryAcceptorLogger;
 import org.axesoft.jaxos.logger.RocksDbAcceptorLogger;
 import org.axesoft.jaxos.algo.EventWorkerPool;
 import org.axesoft.jaxos.netty.NettyCommunicatorFactory;
 import org.axesoft.jaxos.netty.NettyJaxosServer;
+import org.axesoft.jaxos.network.protobuff.ProtoMessageCoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +20,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -34,7 +36,6 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
     private AcceptorLogger acceptorLogger;
     private Communicator communicator;
     private NettyJaxosServer node;
-    private RequestExecutor requestExecutor;
 
     private EventWorkerPool eventWorkerPool;
     private Squad[] squads;
@@ -53,17 +54,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
         this.stateMachine = checkNotNull(stateMachine, "The param stateMachine is null");
         this.ballotIdHolder = new BallotIdHolder(this.settings.serverId());
         this.jaxosMetrics = new MicroMeterJaxosMetrics(this.settings.serverId());
-
-        if ("rocksdb".equals(settings.loggerImplementation())) {
-            this.acceptorLogger = new RocksDbAcceptorLogger(this.settings.dbDirectory(), this.settings.partitionNumber(),
-                    this.settings.syncInterval().toMillis() < 100, jaxosMetrics);
-        }
-        else if ("memory".equals(settings.loggerImplementation())) {
-            this.acceptorLogger = new MemoryAcceptorLogger(25000);
-        }
-        else {
-            throw new IllegalArgumentException("Unknown logger implementation '" + settings.loggerImplementation() + "'");
-        }
+        this.acceptorLogger = createLoggerBackend(this.settings, this.jaxosMetrics);
 
         this.components = new Components() {
             @Override
@@ -102,21 +93,30 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
         this.eventWorkerPool = new EventWorkerPool(settings.algoThreadNumber(), () -> this.platoon);
 
 
-        this.timerExecutor = Executors.newScheduledThreadPool(2, (r) -> {
-            String name = "scheduledTaskThread";
-            Thread thread = new Thread(r, name);
-            thread.setDaemon(true);
-            return thread;
-        });
-
+        this.timerExecutor = Executors.newScheduledThreadPool(2, new NumberedThreadFactory("JaxosScheduledTask"));
 
         super.addListener(new JaxosServiceListener(), MoreExecutors.directExecutor());
 
         restoreFromDb();
     }
 
+    private AcceptorLogger createLoggerBackend(JaxosSettings settings, JaxosMetrics metrics) {
+        if ("rocksdb".equals(settings.loggerBackend())) {
+            return new RocksDbAcceptorLogger(settings.dbDirectory(), settings.partitionNumber(),
+                    settings.syncInterval().toMillis() < 100, metrics);
+        }
+        else if ("memory".equals(settings.loggerBackend())) {
+            metrics.setLoggerDiskSizeSupplierIfNot(() -> 0L);
+            return new MemoryAcceptorLogger(25000);
+        }
+        else {
+            throw new IllegalArgumentException("Unknown logger backend '" + settings.loggerBackend() + "'");
+        }
+
+    }
+
     private void restoreFromDb() {
-        if ("memory".equals(settings.loggerImplementation())) {
+        if ("memory".equals(settings.loggerBackend())) {
             logger.info("Initialize in memory log db");
             return;
         }
@@ -201,7 +201,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
     protected void run() throws Exception {
         this.node = new NettyJaxosServer(this.settings, this.eventWorkerPool);
 
-        NettyCommunicatorFactory factory = new NettyCommunicatorFactory(settings, this.eventWorkerPool);
+        NettyCommunicatorFactory factory = new NettyCommunicatorFactory(settings, this.eventWorkerPool, this.platoon::createConnectRequest);
         this.communicator = factory.createCommunicator();
 
         if (settings.syncInterval().toMillis() >= 100) {
@@ -325,16 +325,42 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
     }
 
     private class Platoon implements EventDispatcher {
-        /**
-         * Map(SquadId, Pair(ServerId, last chosen instance id))
-         */
-        private Map<Integer, Pair<Integer, Long>> squadInstanceMap = new HashMap<>();
-        private int chosenQueryResponseCount = 0;
-        private Timeout chosenQueryTimeout;
+
+        private volatile BitSet connectedPeers;
+        private GroupedRateLimiter rateLimiter;
+        public Platoon() {
+            this.connectedPeers = new BitSet();
+            //Itself is always connected, otherwise self-generated event can't be processed
+            this.connectedPeers.set(settings.serverId());
+            this.rateLimiter = new GroupedRateLimiter(1.0/10.0);
+        }
 
         @Override
         public Event processEvent(Event event) {
-            return getSquad(event).processEvent(event);
+            if(!state().equals(State.RUNNING)){
+                if(this.rateLimiter.tryAcquireFor(event.senderId())){
+                    logger.info("Abandon events from {} due to not running", event.senderId());
+                }
+                return null;
+            }
+
+            switch (event.code()) {
+                case JOIN_REQUEST:
+                    return processJoinRequest((Event.JoinRequest) event);
+                case PEER_LEFT: {
+                    onPeerLeft((Event.PeerLeft) event);
+                    return null;
+                }
+                default: {
+                    if (!connectedPeers.get(event.senderId())) {
+                        if(rateLimiter.tryAcquireFor(event.senderId())){
+                            logger.info("Abandon events from {} due to not joined", event.senderId());
+                        }
+                        return null;
+                    }
+                    return getSquad(event).processEvent(event);
+                }
+            }
         }
 
         private Squad getSquad(Event event) {
@@ -346,13 +372,82 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
                 throw new IllegalArgumentException("Invalid squadId in " + event.toString());
             }
         }
+
+        private synchronized Event.JoinResponse processJoinRequest(Event.JoinRequest req) {
+            boolean success = false;
+            String message = null;
+
+            if (connectedPeers.get(req.senderId())) { //Self id is always in connectedPeers
+                message = "another same id(" + req.senderId() + ") server already connected";
+            }
+            else {
+                JaxosSettings.Peer peer = settings.getPeer(req.senderId());
+                if (peer == null) {
+                    message = String.format("Server id(%d) not found in my settings", req.senderId());
+                }
+                else {
+                    List<Supplier<String>> checks = ImmutableList.of(
+                            () -> checkEquals(settings.connectToken(), req.token(), "token"),
+                            () -> checkEquals(settings.partitionNumber(), req.partitionNumber(), "partition number"),
+                            () -> checkEquals(ProtoMessageCoder.MESSAGE_VERSION, req.jaxosMessageVersion(), "jaxos message version"),
+                            () -> checkEquals(settings.appMessageVersion(), req.appMessageVersion(), "app message version"),
+                            () -> checkEquals(peer.address(), req.hostname(), "peer hostname"),
+                            () -> checkEquals(settings.self().address(), req.destHostname(), "destination server name"));
+                    Iterator<Supplier<String>> it = checks.iterator();
+                    while (message == null && it.hasNext()) {
+                        message = it.next().get();
+                    }
+
+                    if (message == null) {
+                        BitSet s1 = BitSet.valueOf(this.connectedPeers.toByteArray());
+                        s1.set(req.senderId());
+                        this.connectedPeers = s1;
+
+                        success = true;
+                        message = "ok";
+                        logger.info("Server {} joined", req.senderId());
+                    }
+                }
+            }
+
+            return new Event.JoinResponse(settings.serverId(), success, message);
+        }
+
+        private String checkEquals(Object mine, Object other, String itemName) {
+            if (!Objects.equals(mine, other)) {
+                String fmt = mine instanceof String ?
+                        "given %s'%s' is unequal to mine'%s'" :
+                        "given %s(%s) s unequal to mine(%s)";
+                return String.format(fmt, itemName, Objects.toString(other), Objects.toString(mine));
+            }
+            return null;
+        }
+
+        private Event.JoinRequest createConnectRequest(int serverId) {
+            JaxosSettings.Peer peer = settings.getPeer(serverId);
+            if(peer == null){
+                throw new IllegalArgumentException("Given server id not in config " + serverId);
+            }
+
+            return new Event.JoinRequest(settings.serverId(), settings.connectToken(), settings.self().address(),
+                    settings.partitionNumber(), ProtoMessageCoder.MESSAGE_VERSION, settings.appMessageVersion(),
+                    peer.address());
+        }
+
+        private synchronized void onPeerLeft(Event.PeerLeft event) {
+            if (this.connectedPeers.get(event.peerId())) {
+                BitSet s1 = BitSet.valueOf(this.connectedPeers.toByteArray());
+                s1.clear(event.peerId());
+                this.connectedPeers = s1;
+                logger.info("Server {} left ", event.peerId());
+            }
+        }
     }
 
     private class JaxosServiceListener extends Listener {
         @Override
         public void running() {
             logger.info("{} {} started at port {}", SERVICE_NAME, settings.serverId(), settings.self().port());
-            //logger.info("Using {} ", settings);
         }
 
         @Override

@@ -22,6 +22,9 @@ public class CounterTest {
 
     @Test
     public void testMask() throws Exception {
+
+        System.out.println(String.format("%x", 12638));
+
         for (String s : new String[]{
                 "$home/var", "$home_dir/var", "$homedir/abc"
         }) {

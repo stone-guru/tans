@@ -30,7 +30,7 @@ public class EventWorkerPool implements EventTimer {
                     0L, TimeUnit.MILLISECONDS,
                     new LinkedBlockingQueue<>(THREAD_QUEUE_CAPACITY),
                     (r) -> {
-                        String name = "EventWorkerThread-" + threadNo;
+                        String name = "JaxosEventWorker-" + threadNo;
                         Thread thread = new Thread(r, name);
                         thread.setDaemon(true);
                         return thread;
@@ -41,7 +41,7 @@ public class EventWorkerPool implements EventTimer {
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(THREAD_QUEUE_CAPACITY),
                 (r) -> {
-                    String name = "EventWorkerBackendThread";
+                    String name = "JaxosBackend";
                     Thread thread = new Thread(r, name);
                     thread.setDaemon(true);
                     return thread;
@@ -57,7 +57,7 @@ public class EventWorkerPool implements EventTimer {
     }
 
     public void queueTask(int squadId, Runnable r) {
-        int n = squadId % ballotExecutors.length;
+        int n = squadId >= 0? squadId % ballotExecutors.length : 0;
         try {
             this.ballotExecutors[n].submit(new RunnableWithLog(squadId, logger, r));
         }

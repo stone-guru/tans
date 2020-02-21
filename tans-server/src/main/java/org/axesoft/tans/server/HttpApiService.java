@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.*;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -15,15 +14,12 @@ import io.netty.handler.codec.http.*;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.CharsetUtil;
-import io.netty.util.ReferenceCountUtil;
 import org.axesoft.jaxos.JaxosSettings;
-import org.axesoft.jaxos.algo.ProposeResult;
 import org.axesoft.jaxos.base.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -124,8 +120,8 @@ public class HttpApiService extends AbstractExecutionThreadService {
             }
         }, 1000, 1);
 
-        this.bossGroup = new NioEventLoopGroup(config.nettyBossThreadNumber());
-        this.workerGroup = new NioEventLoopGroup(config.nettyWorkerThreadNumber());
+        this.bossGroup = new NioEventLoopGroup(config.nettyBossThreadNumber(), new NumberedThreadFactory("NettyTansApiBoss"));
+        this.workerGroup = new NioEventLoopGroup(config.nettyWorkerThreadNumber(), new NumberedThreadFactory("NettyTansApiWorker"));
 
         try {
             ServerBootstrap b = new ServerBootstrap();

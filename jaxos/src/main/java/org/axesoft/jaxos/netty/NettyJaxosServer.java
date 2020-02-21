@@ -3,7 +3,6 @@ package org.axesoft.jaxos.netty;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -12,22 +11,23 @@ import io.netty.handler.codec.protobuf.ProtobufDecoder;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
 import io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender;
-import io.netty.handler.timeout.IdleState;
-import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.AttributeKey;
 import org.axesoft.jaxos.JaxosSettings;
 import org.axesoft.jaxos.algo.*;
+import org.axesoft.jaxos.base.GroupedRateLimiter;
+import org.axesoft.jaxos.base.NumberedThreadFactory;
 import org.axesoft.jaxos.network.MessageCoder;
 import org.axesoft.jaxos.network.protobuff.PaxosMessage;
 import org.axesoft.jaxos.network.protobuff.ProtoMessageCoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class NettyJaxosServer {
+    private final static AttributeKey<Integer> ATTR_PEER_ID = AttributeKey.newInstance("PEER_ID");
+
     private static Logger logger = LoggerFactory.getLogger(NettyJaxosServer.class);
 
     private JaxosSettings settings;
@@ -35,6 +35,7 @@ public class NettyJaxosServer {
     private Channel serverChannel;
     private EventWorkerPool workerPool;
     private JaxosChannelHandler jaxosChannelHandler;
+    private GroupedRateLimiter peerRateLimiter;
 
     public NettyJaxosServer(JaxosSettings settings, EventWorkerPool workerPool) {
         this.settings = settings;
@@ -42,11 +43,14 @@ public class NettyJaxosServer {
         this.workerPool = workerPool;
 
         this.jaxosChannelHandler = new JaxosChannelHandler();
+        this.peerRateLimiter = new GroupedRateLimiter(1.0 / 5.0);
     }
 
     public void startup() {
-        EventLoopGroup boss = new NioEventLoopGroup(1);
-        EventLoopGroup worker = new NioEventLoopGroup(16);
+        EventLoopGroup boss = new NioEventLoopGroup(1,
+                new NumberedThreadFactory("NettyJaxosBoss"));
+        EventLoopGroup worker = new NioEventLoopGroup(this.settings.nettyJaxosWorkerThreadNumber(),
+                new NumberedThreadFactory("NettyJaxosWorker"));
         try {
             ServerBootstrap serverBootstrap = new ServerBootstrap()
                     .group(boss, worker)
@@ -88,17 +92,30 @@ public class NettyJaxosServer {
         this.serverChannel.close();
     }
 
+
     @ChannelHandler.Sharable
     public class JaxosChannelHandler extends SimpleChannelInboundHandler<PaxosMessage.DataGram> {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            logger.info("Channel connected from {}", ctx.channel().remoteAddress());
+            logger.info("Socket connected from {}", ctx.channel().remoteAddress());
         }
 
         @Override
         public void channelRead0(ChannelHandlerContext ctx, PaxosMessage.DataGram msg) throws Exception {
             Event e0 = messageCoder.decode(msg);
+
+            Integer peerId = ctx.channel().attr(ATTR_PEER_ID).get();
+            //this is the first
+            if (peerId == null) {
+                ctx.channel().attr(ATTR_PEER_ID).set(e0.senderId());
+            }
+            else if (e0.senderId() != peerId) {
+                if(peerRateLimiter.tryAcquireFor(peerId)){
+                    logger.warn("Phony server id({}) while being {} at the beginning!", e0.senderId(), peerId);
+                }
+                return;
+            }
 
             NettyJaxosServer.this.workerPool.submitEvent(e0, e1 -> {
                 PaxosMessage.DataGram response = messageCoder.encode(e1);
@@ -107,8 +124,18 @@ public class NettyJaxosServer {
         }
 
         @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            Integer peerId = ctx.channel().attr(ATTR_PEER_ID).get();
+            if(peerId != null){
+                NettyJaxosServer.this.workerPool.submitEventToSelf(new Event.PeerLeft(settings.serverId(), peerId));
+            }
+            super.channelInactive(ctx);
+        }
+
+        @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER.retainedDuplicate());
+            //ctx.writeAndFlush(Unpooled.EMPTY_BUFFER.retainedDuplicate());
+            super.channelReadComplete(ctx);
         }
 
         @Override

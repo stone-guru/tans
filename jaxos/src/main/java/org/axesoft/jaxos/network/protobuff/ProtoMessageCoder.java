@@ -4,7 +4,6 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import org.apache.commons.lang3.tuple.Pair;
 import org.axesoft.jaxos.algo.CheckPoint;
 import org.axesoft.jaxos.algo.Event;
 import org.axesoft.jaxos.algo.Instance;
@@ -20,6 +19,8 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
+    public static final String MESSAGE_VERSION = "0.1.1";
+
     private static Logger logger = LoggerFactory.getLogger(ProtoMessageCoder.class);
 
     private BiMap<PaxosMessage.Code, Event.Code> codeDecodeMap;
@@ -30,12 +31,13 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
 
     public ProtoMessageCoder() {
         codeDecodeMap = ImmutableBiMap.<PaxosMessage.Code, Event.Code>builder()
+                .put(PaxosMessage.Code.JOIN_REQ, Event.Code.JOIN_REQUEST)
+                .put(PaxosMessage.Code.JOIN_RES, Event.Code.JOIN_RESPONSE)
                 .put(PaxosMessage.Code.ACCEPT_REQ, Event.Code.ACCEPT)
                 .put(PaxosMessage.Code.ACCEPT_RES, Event.Code.ACCEPT_RESPONSE)
                 .put(PaxosMessage.Code.PREPARE_REQ, Event.Code.PREPARE)
                 .put(PaxosMessage.Code.PREPARE_RES, Event.Code.PREPARE_RESPONSE)
-                .put(PaxosMessage.Code.ACCEPTED_NOTIFY, Event.Code.ACCEPTED_NOTIFY)
-                .put(PaxosMessage.Code.ACCEPTED_ACK, Event.Code.ACCEPTED_NOTIFY_RESPONSE)
+                .put(PaxosMessage.Code.CHOSEN_NOTIFY, Event.Code.CHOSEN_NOTIFY)
                 .put(PaxosMessage.Code.LEARN_REQ, Event.Code.LEARN_REQUEST)
                 .put(PaxosMessage.Code.LEARN_RES, Event.Code.LEARN_RESPONSE)
                 .build();
@@ -71,7 +73,7 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
                 body = encodeBody((Event.AcceptResponse) event);
                 break;
             }
-            case ACCEPTED_NOTIFY: {
+            case CHOSEN_NOTIFY: {
                 body = encodeBody((Event.ChosenNotify) event);
                 break;
             }
@@ -81,6 +83,14 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
             }
             case LEARN_RESPONSE: {
                 body = encodeBody((Event.LearnResponse) event);
+                break;
+            }
+            case JOIN_REQUEST: {
+                body = encodeBody((Event.JoinRequest) event);
+                break;
+            }
+            case JOIN_RESPONSE: {
+                body = encodeBody((Event.JoinResponse) event);
                 break;
             }
             default: {
@@ -101,6 +111,26 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     }
 
 
+    private ByteString encodeBody(Event.JoinRequest event) {
+        return PaxosMessage.JoinReq.newBuilder()
+                .setToken(ByteString.copyFromUtf8(event.token()))
+                .setHostname(ByteString.copyFromUtf8(event.hostname()))
+                .setPartitionNumber(event.partitionNumber())
+                .setJaxosMessageVersion(ByteString.copyFromUtf8(event.jaxosMessageVersion()))
+                .setAppMessageVersion(ByteString.copyFromUtf8(event.appMessageVersion()))
+                .setDestHostname(ByteString.copyFromUtf8(event.destHostname()))
+                .build()
+                .toByteString();
+    }
+
+
+    private ByteString encodeBody(Event.JoinResponse event) {
+        return PaxosMessage.JoinRes.newBuilder()
+                .setResult(event.success() ? 1 : 0)
+                .setMsg(ByteString.copyFromUtf8(event.message()))
+                .build()
+                .toByteString();
+    }
 
     private ByteString encodeBody(Event.PrepareRequest req) {
         return PaxosMessage.PrepareReq.newBuilder()
@@ -212,6 +242,12 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     public Event decode(PaxosMessage.DataGram dataGram) {
         try {
             switch (dataGram.getCode()) {
+                case JOIN_REQ: {
+                    return decodeConnectReq(dataGram);
+                }
+                case JOIN_RES: {
+                    return decodeConnectRes(dataGram);
+                }
                 case PREPARE_REQ: {
                     return decodePrepareReq(dataGram);
                 }
@@ -224,7 +260,7 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
                 case ACCEPT_RES: {
                     return decodeAcceptResponse(dataGram);
                 }
-                case ACCEPTED_NOTIFY: {
+                case CHOSEN_NOTIFY: {
                     return decodeAcceptedNotify(dataGram);
                 }
                 case LEARN_REQ: {
@@ -244,6 +280,21 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
         }
     }
 
+    private Event decodeConnectReq(PaxosMessage.DataGram dataGram) throws InvalidProtocolBufferException {
+        PaxosMessage.JoinReq req = PaxosMessage.JoinReq.parseFrom(dataGram.getBody());
+        return new Event.JoinRequest(dataGram.getSender(),
+                req.getToken().toStringUtf8(),
+                req.getHostname().toStringUtf8(),
+                req.getPartitionNumber(),
+                req.getJaxosMessageVersion().toStringUtf8(),
+                req.getAppMessageVersion().toStringUtf8(),
+                req.getDestHostname().toStringUtf8());
+    }
+
+    private Event decodeConnectRes(PaxosMessage.DataGram dataGram) throws InvalidProtocolBufferException {
+        PaxosMessage.JoinRes res = PaxosMessage.JoinRes.parseFrom(dataGram.getBody());
+        return new Event.JoinResponse(dataGram.getSender(), res.getResult() != 0, res.getMsg().toStringUtf8());
+    }
 
     private Event decodePrepareReq(PaxosMessage.DataGram dataGram) throws InvalidProtocolBufferException {
         PaxosMessage.PrepareReq req = PaxosMessage.PrepareReq.parseFrom(dataGram.getBody());
@@ -327,14 +378,14 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     }
 
     //ChosenInfo related
-    private PaxosMessage.ChosenInfo.Builder encodeChosenInfo(Event.ChosenInfo chosenInfo){
+    private PaxosMessage.ChosenInfo.Builder encodeChosenInfo(Event.ChosenInfo chosenInfo) {
         return PaxosMessage.ChosenInfo.newBuilder()
                 .setInstanceId(chosenInfo.instanceId())
                 .setBallotId(chosenInfo.ballotId())
                 .setElapsedMillis(chosenInfo.elapsedMillis());
     }
 
-    private Event.ChosenInfo decodeChosenInfo(PaxosMessage.ChosenInfo chosenInfo){
+    private Event.ChosenInfo decodeChosenInfo(PaxosMessage.ChosenInfo chosenInfo) {
         return new Event.ChosenInfo(chosenInfo.getInstanceId(), chosenInfo.getBallotId(), chosenInfo.getElapsedMillis());
     }
 

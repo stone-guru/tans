@@ -1,7 +1,6 @@
 package org.axesoft.jaxos.algo;
 
 import com.google.protobuf.ByteString;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.Date;
 import java.util.List;
@@ -11,10 +10,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public abstract class Event {
     public enum Code {
+        JOIN_REQUEST, JOIN_RESPONSE, PEER_LEFT,
         PROPOSAL_TIMEOUT,
         PREPARE, PREPARE_RESPONSE, PREPARE_TIMEOUT,
         ACCEPT, ACCEPT_RESPONSE, ACCEPT_TIMEOUT,
-        ACCEPTED_NOTIFY, ACCEPTED_NOTIFY_RESPONSE,
+        CHOSEN_NOTIFY,
         LEARN_REQUEST, LEARN_RESPONSE, LEARN_TIMEOUT,
     }
 
@@ -47,6 +47,113 @@ public abstract class Event {
 
     public int squadId() {
         return -1;
+    }
+
+    public static abstract class ConnectEvent extends Event {
+        public ConnectEvent(int senderId) {
+            super(senderId);
+        }
+    }
+
+    public static class JoinRequest extends ConnectEvent {
+        private String token;
+        private String hostname;
+        private int partitionNumber;
+        private String jaxosMessageVersion;
+        private String appMessageVersion;
+        private String destHostname;
+
+        public JoinRequest(int senderId, String token, String hostname, int partitionNumber,
+                           String jaxosMessageVersion, String appMessageVersion,
+                           String destHostname) {
+            super(senderId);
+            this.token = token;
+            this.hostname = hostname;
+            this.partitionNumber = partitionNumber;
+            this.jaxosMessageVersion = jaxosMessageVersion;
+            this.appMessageVersion = appMessageVersion;
+            this.destHostname = destHostname;
+        }
+
+        @Override
+        public Code code() {
+            return Code.JOIN_REQUEST;
+        }
+
+        public String token() {
+            return token;
+        }
+
+        public String hostname() {
+            return hostname;
+        }
+
+        public int partitionNumber() {
+            return partitionNumber;
+        }
+
+        public String jaxosMessageVersion() {
+            return jaxosMessageVersion;
+        }
+
+        public String appMessageVersion() {
+            return appMessageVersion;
+        }
+
+        public String destHostname() {
+            return destHostname;
+        }
+    }
+
+    public static class PeerLeft extends ConnectEvent {
+        private int peerId;
+
+        public PeerLeft(int senderId, int peerId) {
+            super(senderId);
+            this.peerId = peerId;
+        }
+
+
+        @Override
+        public Code code() {
+            return Code.PEER_LEFT;
+        }
+
+        public int peerId() {
+            return peerId;
+        }
+    }
+
+    public static class JoinResponse extends ConnectEvent {
+        private boolean success;
+        private String message;
+
+        public JoinResponse(int senderId, boolean success, String message) {
+            super(senderId);
+            this.success = success;
+            this.message = message;
+        }
+
+        @Override
+        public Code code() {
+            return Code.JOIN_RESPONSE;
+        }
+
+        public boolean success() {
+            return success;
+        }
+
+        public String message() {
+            return message;
+        }
+
+        @Override
+        public String toString() {
+            return "ConnectResponse{" +
+                    "success=" + success +
+                    ", message='" + message + '\'' +
+                    '}';
+        }
     }
 
     public static abstract class BallotEvent extends Event {
@@ -427,7 +534,7 @@ public abstract class Event {
 
         @Override
         public Code code() {
-            return Code.ACCEPTED_NOTIFY;
+            return Code.CHOSEN_NOTIFY;
         }
 
         public int ballot() {

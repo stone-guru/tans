@@ -57,6 +57,7 @@ are by netty
 * DONE use fully PooledDirectBuff for all network interfaces	    :network:
 * DONE change build tool from gradle to maven				:dev:
 * TODO the last saved instance should be confirmed again after restarting :algo:
+* TODO Print version number in tans's splash message		       :base:
 * Issues
 ** TODO [#C] Netty print ERROR message [[file:caselog/netty-error.log][logs]]
 ** TODO client hang when getting redirect to a not given server address 			      :client:

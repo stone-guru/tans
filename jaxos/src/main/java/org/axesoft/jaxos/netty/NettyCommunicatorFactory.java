@@ -1,6 +1,5 @@
 package org.axesoft.jaxos.netty;
 
-import com.google.common.collect.ImmutableList;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -17,10 +16,10 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import io.netty.util.concurrent.RejectedExecutionHandler;
 import org.axesoft.jaxos.algo.Event;
 import org.axesoft.jaxos.algo.EventWorkerPool;
 import org.axesoft.jaxos.base.GroupedRateLimiter;
+import org.axesoft.jaxos.base.NumberedThreadFactory;
 import org.axesoft.jaxos.network.CommunicatorFactory;
 import org.axesoft.jaxos.network.protobuff.PaxosMessage;
 import org.axesoft.jaxos.network.protobuff.ProtoMessageCoder;
@@ -32,102 +31,45 @@ import org.slf4j.LoggerFactory;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class NettyCommunicatorFactory implements CommunicatorFactory {
     private final static AttributeKey<JaxosSettings.Peer> ATTR_PEER = AttributeKey.newInstance("PEER");
+    private final static AttributeKey<Boolean> JOIN_FAIL = AttributeKey.newInstance("JOIN_FAIL");
 
     private static Logger logger = LoggerFactory.getLogger(NettyCommunicatorFactory.class);
 
     private JaxosSettings config;
     private ProtoMessageCoder coder;
     private EventWorkerPool eventWorkerPool;
+    private Function<Integer, Event> connectRequestProvider;
 
-    public NettyCommunicatorFactory(JaxosSettings config, EventWorkerPool eventWorkerPool) {
+    public NettyCommunicatorFactory(JaxosSettings config, EventWorkerPool eventWorkerPool, Function<Integer, Event> connectRequestProvider) {
         this.config = config;
         this.coder = new ProtoMessageCoder();
         this.eventWorkerPool = eventWorkerPool;
+        this.connectRequestProvider = connectRequestProvider;
     }
 
     @Override
     public Communicator createCommunicator() {
-        EventLoopGroup worker = new NioEventLoopGroup();
-
-        ImmutableList.Builder<Communicator> builder = ImmutableList.builder();
-        for (int i = 0; i < Math.min(1, this.config.partitionNumber()); i++) {
-            ChannelGroupCommunicator c = new ChannelGroupCommunicator(worker);
-            c.start();
-            builder.add(c);
-        }
-
-        return new CompositeCommunicator(builder.build());
-    }
-
-    private static class CompositeCommunicator implements Communicator {
-        private Communicator[] communicators;
-
-        public CompositeCommunicator(List<Communicator> communicators) {
-            this.communicators = communicators.toArray(new Communicator[communicators.size()]);
-        }
-
-        @Override
-        public boolean available() {
-            return selectCommunicator(0).isPresent();
-        }
-
-        @Override
-        public void broadcast(Event msg) {
-            selectCommunicator(msg.squadId()).ifPresent(c -> c.broadcast(msg));
-        }
-
-        @Override
-        public void broadcastOthers(Event msg) {
-            selectCommunicator(msg.squadId()).ifPresent(c -> broadcastOthers(msg));
-        }
-
-        @Override
-        public void selfFirstBroadcast(Event msg) {
-            selectCommunicator(msg.squadId()).ifPresent(c -> c.selfFirstBroadcast(msg));
-        }
-
-        @Override
-        public void send(Event event, int serverId) {
-            selectCommunicator(event.squadId()).ifPresent(c -> c.send(event, serverId));
-        }
-
-        @Override
-        public void close() {
-            for (Communicator c : communicators) {
-                try {
-                    c.close();
-                }
-                catch (Exception e) {
-                    logger.error("error when close communicator", e);
-                }
-            }
-        }
-
-        private Optional<Communicator> selectCommunicator(int squadId) {
-            int i0 = (squadId + communicators.length) % communicators.length;
-            int i = i0;
-            do {
-                if (communicators[i].available()) {
-                    return Optional.of(communicators[i]);
-                }
-                else {
-                    i = (i + 1) % communicators.length;
-                }
-            } while (i != i0);
-            return Optional.empty();
-        }
+        EventLoopGroup worker = new NioEventLoopGroup(2, new NumberedThreadFactory("JaxosSenderThread"));
+        ChannelGroupCommunicator c = new ChannelGroupCommunicator(worker);
+        c.start();
+        return c;
     }
 
     private class ChannelGroupCommunicator implements Communicator {
         private ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+        private List<Channel> newerChannels = new CopyOnWriteArrayList<>();
+
         private Bootstrap bootstrap;
         private EventLoopGroup worker;
         private volatile boolean closed;
+
         private Map<Integer, ChannelId> channelIdMap = new ConcurrentHashMap<>();
         private GroupedRateLimiter rateLimiter = new GroupedRateLimiter(1.0 / 15.0);
 
@@ -205,15 +147,12 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
                             logger.warn("Unable to connect to {} ", peer);
                         }
                         if (!worker.isShuttingDown()) {
-                            worker.schedule(() -> connect(peer), 3, TimeUnit.SECONDS);
+                            worker.schedule(() -> connect(peer), 2, TimeUnit.SECONDS);
                         }
                     }
                     else {
-                        logger.info("Connected to {}", peer);
-                        Channel c = ((ChannelFuture) f).channel();
-                        c.attr(ATTR_PEER).set(peer);
-                        channels.add(c);
-                        channelIdMap.put(peer.id(), c.id());
+                        logger.info("Socket created to {}", peer);
+                        initChannel(((ChannelFuture)f).channel(), peer);
                     }
                 });
             }
@@ -224,9 +163,28 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
             }
         }
 
+        private void initChannel(Channel c, JaxosSettings.Peer peer){
+            c.attr(ATTR_PEER).set(peer);
+            PaxosMessage.DataGram d = coder.encode(connectRequestProvider.apply(peer.id()));
+            c.writeAndFlush(d);
+            newerChannels.add(c);
+        }
+
+        private void onConnectResponseEvent(Event.JoinResponse event, Channel channel) {
+            if(event.success()){
+                channels.add(channel);
+                channelIdMap.put(channel.attr(ATTR_PEER).get().id(), channel.id());
+                logger.info("Success join peer {}", channel.attr(ATTR_PEER).get());
+            } else {
+                logger.info("Failed to join  peer {} due to {}", channel.attr(ATTR_PEER).get(), event.message());
+                channel.attr(JOIN_FAIL).set(true);
+                channel.close();
+            }
+        }
+
         @Override
         public boolean available() {
-            return channels.size() + 1 >= config.peerCount() / 2;
+            return !closed & channels.size() + 1 >= config.peerCount() / 2;
         }
 
         @Override
@@ -281,7 +239,12 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
 
             if (peer != null) {
                 channelIdMap.remove(peer.id());
-                connect(peer);
+                //Channel is closed proactively of login failed, re-try it after 10 seconds
+                if(c.attr(JOIN_FAIL).get() != null) {
+                    worker.schedule(() -> connect(peer), 10, TimeUnit.SECONDS);
+                } else {
+                    connect(peer);
+                }
             }
             else {
                 logger.error("No bind peer on channel");
@@ -302,7 +265,6 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
                 logger.error("error when do communicator.close()", e);
             }
         }
-
     }
 
     private class JaxosClientHandler extends SimpleChannelInboundHandler {
@@ -329,7 +291,11 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
 
                 Event event = coder.decode(dataGram);
                 if (event != null) {
-                    eventWorkerPool.submitEventToSelf(event);
+                    if(event.code() == Event.Code.JOIN_RESPONSE){
+                        communicator.onConnectResponseEvent((Event.JoinResponse)event, ctx.channel());
+                    }else {
+                        eventWorkerPool.submitEventToSelf(event);
+                    }
                 }
             }
             else {

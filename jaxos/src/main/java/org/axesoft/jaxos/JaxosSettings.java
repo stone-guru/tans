@@ -65,7 +65,10 @@ public class JaxosSettings {
         private Duration learnTimeout = Duration.ofMillis(1500);
         private long learnInstanceLimit = 50000;
         private long sendInstanceLimit = 20000;
-        private String loggerImplementation = "rocksdb";
+        private String loggerBackend = "rocksdb";
+        private String connectToken  = "EF0A87B";
+        private String appMessageVersion;
+        private int nettyJaxosWorkerThreadNumber = 4;
 
         private Function<ByteString, String> valueVerboser;
 
@@ -156,8 +159,23 @@ public class JaxosSettings {
             return this;
         }
 
-        public Builder setLoggerImplementation(String loggerImplementation) {
-            this.loggerImplementation = loggerImplementation;
+        public Builder setLoggerBackend(String loggerBackend) {
+            this.loggerBackend = loggerBackend;
+            return this;
+        }
+
+        public Builder setConnectToken(String connectToken) {
+            this.connectToken = connectToken;
+            return this;
+        }
+
+        public Builder setAppMessageVersion(String appMessageVersion) {
+            this.appMessageVersion = appMessageVersion;
+            return this;
+        }
+
+        public Builder setNettyJaxosWorkerThreadNumber(int nettyJaxosWorkerThreadNumber) {
+            this.nettyJaxosWorkerThreadNumber = nettyJaxosWorkerThreadNumber;
             return this;
         }
 
@@ -184,8 +202,10 @@ public class JaxosSettings {
             config.learnTimeout = this.learnTimeout;
             config.learnInstanceLimit = this.learnInstanceLimit;
             config.sendInstanceLimit = this.sendInstanceLimit;
-            config.loggerImplementation = this.loggerImplementation;
-
+            config.loggerBackend = this.loggerBackend;
+            config.appMessageVersion = this.appMessageVersion;
+            config.connectToken = this.connectToken;
+            config.nettyJaxosWorkerThreadNumber = this.nettyJaxosWorkerThreadNumber;
             return config;
         }
     }
@@ -207,8 +227,10 @@ public class JaxosSettings {
     private long learnInstanceLimit = 50000;
     private long sendInstanceLimit = 20000;
     private Function<ByteString, String> valueVerboser;
-    private String loggerImplementation;
-
+    private String loggerBackend;
+    private String connectToken;
+    private String appMessageVersion;
+    private int nettyJaxosWorkerThreadNumber;
 
     private JaxosSettings() {
     }
@@ -297,10 +319,21 @@ public class JaxosSettings {
         return this.sendInstanceLimit;
     }
 
-    public String loggerImplementation(){
-        return this.loggerImplementation;
+    public String loggerBackend(){
+        return this.loggerBackend;
     }
 
+    public String connectToken(){
+        return this.connectToken;
+    }
+
+    public int nettyJaxosWorkerThreadNumber() {
+        return nettyJaxosWorkerThreadNumber;
+    }
+
+    public String appMessageVersion() {
+        return appMessageVersion;
+    }
 
     @Override
     public String toString() {
@@ -315,12 +348,14 @@ public class JaxosSettings {
                 ", acceptTimeoutMillis=" + acceptTimeoutMillis +
                 ", partitionNumber=" + partitionNumber +
                 ", algoThreadNumber=" + algoThreadNumber +
+                ", nettyJaxosThreadNumber=" + nettyJaxosWorkerThreadNumber +
                 ", conflictSleepMillis=" + conflictSleepMillis +
                 ", checkPointMinutes=" + checkPointMinutes +
                 ", loggerSyncInterval=" + syncInterval +
                 ", learnInstanceLimit=" + learnInstanceLimit +
                 ", sendInstanceLimit=" + sendInstanceLimit +
-                ", loggerImplementation=" + loggerImplementation +
+                ", loggerBackend=" + loggerBackend +
+                ", appMessageVersion=" + appMessageVersion +
                 '}';
     }
 }

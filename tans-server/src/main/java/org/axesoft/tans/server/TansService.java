@@ -25,6 +25,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class TansService implements StateMachine, HasMetrics {
+    public static final String MESSAGE_VERSION = "0.1.5";
+
     private static Logger logger = LoggerFactory.getLogger(TansService.class);
 
     private Supplier<Proponent> proponent;

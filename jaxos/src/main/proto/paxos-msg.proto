@@ -8,14 +8,15 @@ option java_outer_classname="PaxosMessage";
 enum Code {
   NONE = 0;
 
+  JOIN_REQ = 1;
+  JOIN_RES = 2;
+  
   PREPARE_REQ = 3;
   PREPARE_RES = 4;
   ACCEPT_REQ = 5;
   ACCEPT_RES = 6;
   
-  ACCEPTED_NOTIFY = 7;
-  ACCEPTED_ACK = 8;
-
+  CHOSEN_NOTIFY = 7;
   //NOOP=10;
 
   LEARN_REQ = 11;
@@ -27,6 +28,20 @@ message DataGram {
   int32 sender = 2;
   int64 timestamp = 3;
   bytes body = 4;
+}
+
+message JoinReq {
+  bytes token = 1;
+  bytes hostname = 2;
+  int32 partitionNumber = 3;
+  bytes jaxosMessageVersion = 4;
+  bytes appMessageVersion = 5;
+  bytes destHostname = 6;
+}
+
+message JoinRes {
+  int32 result = 1;
+  bytes msg = 2;
 }
 
 enum ValueType {

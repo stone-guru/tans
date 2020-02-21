@@ -1,7 +1,6 @@
 package org.axesoft.jaxos.algo;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.*;
 import io.netty.util.Timeout;
 import org.axesoft.jaxos.JaxosSettings;
 import org.slf4j.Logger;
@@ -169,7 +168,7 @@ public class Squad implements EventDispatcher {
                 proposer.onAcceptTimeout((Event.AcceptTimeout) event);
                 return null;
             }
-            case ACCEPTED_NOTIFY: {
+            case CHOSEN_NOTIFY: {
                 acceptor.onChosenNotify(((Event.ChosenNotify) event));
                 return null;
             }

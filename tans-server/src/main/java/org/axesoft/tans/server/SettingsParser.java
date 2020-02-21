@@ -15,7 +15,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class SettingsParser {
-    private Map<String, Object> yamlRoot;
     private JaxosSettings.Builder builder;
     private TansConfig.Builder tansConfigBuilder;
 
@@ -34,14 +33,15 @@ public class SettingsParser {
                     builder.setPrepareTimeoutMillis(d.toMillis());
                 }),
                 new IntItemParser("core.thread.number", i -> builder.setAlgoThreadNumber(i), 1, 32),
-
+                new IntItemParser("core.netty.worker-thread-number", i -> builder.setNettyJaxosWorkerThreadNumber(i), 1, 32),
+                new StringItemParser("core.token", s -> builder.setConnectToken(s)),
                 new DurationItemParser("leader.lease", d -> builder.setLeaderLeaseSeconds((int) d.toSeconds())),
                 new BoolItemParser("leader.mandatory", b -> builder.setLeaderOnly(b)),
 
                 new IntItemParser("db.checkpoint.minutes", i -> builder.setCheckPointMinutes(i)),
                 new StringItemParser("db.path", s -> builder.setDbDirectory(s)),
                 new DurationItemParser("db.sync", d -> builder.setSyncInterval(d)),
-                new StringItemParser("db.backend", s -> builder.setLoggerImplementation(s)),
+                new StringItemParser("db.backend", s -> builder.setLoggerBackend(s)),
                 new DurationItemParser("learn.timeout", d -> builder.setLearnTimeout(d)),
                 new IntItemParser("learn.max-instance", i -> builder.setLearnInstanceLimit(i)),
                 new IntItemParser("learn.max-send", i -> builder.setSendInstanceLimit(i)),
@@ -55,11 +55,10 @@ public class SettingsParser {
         this.itemParserMap = Arrays.stream(items).collect(Collectors.toMap(ItemParser::itemName, i -> i));
     }
 
+    @SuppressWarnings("unchecked")
     public void parse(InputStream is) {
-        yamlRoot = (Map<String, Object>) new Yaml().load(is);
-
-
-        parseSegment(null, this.yamlRoot);
+        Map<String, Object> yamlRoot = (Map<String, Object>) new Yaml().load(is);
+        parseSegment(null, yamlRoot);
     }
 
     public void parseString(String argName, String argValue) {
@@ -76,6 +75,8 @@ public class SettingsParser {
     }
 
     public TansConfig build(){
+        this.builder.setAppMessageVersion(TansService.MESSAGE_VERSION);
+
         return tansConfigBuilder.setJaxosSettings(builder.build())
                 .setPeerHttpPorts(this.peerHttpPortMapBuilder.build())
                 .build();
@@ -127,20 +128,20 @@ public class SettingsParser {
         private boolean stringParsed;
         private boolean objectParsed;
 
-        public ItemParser(String itemName) {
+        ItemParser(String itemName) {
             this.itemName = itemName;
         }
 
-        public String itemName() {
+        String itemName() {
             return itemName;
         }
 
-        public void parseFromObject(Object value) {
+        void parseFromObject(Object value) {
             this.doParseObject(value);
             this.objectParsed = true;
         }
 
-        public void parseFromString(String s) {
+        void parseFromString(String s) {
             this.doParseString(s);
             this.stringParsed = true;
         }
@@ -157,6 +158,7 @@ public class SettingsParser {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         void doParseObject(Object value) {
             List<Map<String, Object>> peers = (List<Map<String, Object>>) value;
             for (Map<String, Object> kv : peers) {
@@ -168,7 +170,7 @@ public class SettingsParser {
 
         @Override
         void doParseString(String s) {
-
+            //TODO accept peer settings from command line
         }
 
 
