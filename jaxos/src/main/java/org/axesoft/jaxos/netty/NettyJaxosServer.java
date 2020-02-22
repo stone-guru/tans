@@ -46,7 +46,7 @@ public class NettyJaxosServer {
         this.peerRateLimiter = new GroupedRateLimiter(1.0 / 5.0);
     }
 
-    public void startup() {
+    public void start() {
         EventLoopGroup boss = new NioEventLoopGroup(1,
                 new NumberedThreadFactory("NettyJaxosBoss"));
         EventLoopGroup worker = new NioEventLoopGroup(this.settings.nettyJaxosWorkerThreadNumber(),

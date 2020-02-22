@@ -199,11 +199,6 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
     @Override
     protected void run() throws Exception {
-        this.node = new NettyJaxosServer(this.settings, this.eventWorkerPool);
-
-        NettyCommunicatorFactory factory = new NettyCommunicatorFactory(settings, this.eventWorkerPool, this.platoon::createConnectRequest);
-        this.communicator = factory.createCommunicator();
-
         if (settings.syncInterval().toMillis() >= 100) {
             this.timerExecutor.scheduleWithFixedDelay(() -> new RunnableWithLog(logger, components.getLogger()::sync).run(),
                     settings.syncInterval().toMillis(), settings.syncInterval().toMillis(), TimeUnit.MILLISECONDS);
@@ -216,7 +211,12 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         this.timerExecutor.scheduleWithFixedDelay(this::runForLeader, (this.settings.leaderLeaseSeconds() + 2) * 1000, LEADER_CHECK_DURATION.toMillis(), TimeUnit.MILLISECONDS);
 
-        this.node.startup();
+
+        NettyCommunicatorFactory factory = new NettyCommunicatorFactory(settings, this.eventWorkerPool, this.platoon::createConnectRequest);
+        this.communicator = factory.createCommunicator();
+
+        this.node = new NettyJaxosServer(this.settings, this.eventWorkerPool);
+        this.node.start();
     }
 
     public ScheduledExecutorService timerExecutor() {
@@ -275,8 +275,6 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
         if (logger.isDebugEnabled()) {
             logger.debug("S{} propose for leader", squadId);
         }
-
-        //this.requestExecutor.submit(squadId, () -> execProposeForLeader(squadId));
         this.eventWorkerPool.submitBackendTask(() -> execProposeForLeader(squadId));
     }
 
