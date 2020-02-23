@@ -43,6 +43,14 @@ public class Acceptor {
         return this.faulty;
     }
 
+
+    public void restore(Instance instance) {
+        this.currentInstanceId = instance.id();
+        this.maxBallot = instance.proposal();
+        this.acceptedBallot = instance.proposal();
+        this.acceptedValue = instance.value();
+    }
+
     public Event.PrepareResponse prepare(Event.PrepareRequest request) {
         if (logger.isTraceEnabled()) {
             logger.trace("S{}: On prepare {} ", context.squadId(), request);
@@ -272,4 +280,5 @@ public class Acceptor {
         // this.maxBallot = unchanged
         this.reset(0);
     }
+
 }

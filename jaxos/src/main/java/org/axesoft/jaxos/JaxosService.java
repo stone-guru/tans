@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -43,7 +44,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
     private ScheduledExecutorService timerExecutor;
     private Components components;
-    private BallotIdHolder ballotIdHolder;
+    private MessageIdHolder messageIdHolder;
     private JaxosMetrics jaxosMetrics;
     private SquadSelector checkPointSquadSelector;
 
@@ -52,7 +53,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         this.settings = checkNotNull(settings, "The param settings is null");
         this.stateMachine = checkNotNull(stateMachine, "The param stateMachine is null");
-        this.ballotIdHolder = new BallotIdHolder(this.settings.serverId());
+        this.messageIdHolder = new MessageIdHolder(this.settings.serverId());
         this.jaxosMetrics = new MicroMeterJaxosMetrics(this.settings.serverId());
         this.acceptorLogger = createLoggerBackend(this.settings, this.jaxosMetrics);
 
@@ -116,16 +117,16 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
     }
 
     private void restoreFromDb() {
-        if ("memory".equals(settings.loggerBackend())) {
-            logger.info("Initialize in memory log db");
-            return;
+        if (settings.loggerBackend().equals("memory")) {
+            logger.info("initialize in memory DB");
         }
-
-        logger.info("Restore from DB at {}", settings.dbDirectory());
+        else {
+            logger.info("Restore from DB at {}", settings.dbDirectory());
+        }
 
         long t0 = System.currentTimeMillis();
 
-        AtomicReference<Exception> exceptionRef = new AtomicReference<>(null);
+        AtomicReference<Boolean> errorOccur = new AtomicReference<>(false);
         CountDownLatch latch = new CountDownLatch(settings.partitionNumber());
         for (int i = 0; i < settings.partitionNumber(); i++) {
             final int n = i;
@@ -134,7 +135,8 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
                     this.squads[n].restoreFromDB();
                 }
                 catch (Exception e) {
-                    exceptionRef.set(e);
+                    errorOccur.set(true);
+                    logger.error("S" + n + " error when restoreFromDB", e);
                 }
                 finally {
                     latch.countDown();
@@ -144,11 +146,12 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         try {
             latch.await();
-            if (exceptionRef.get() != null) {
-                throw new RuntimeException(exceptionRef.get());
+            if (errorOccur.get()) {
+                throw new RuntimeException("RestoreFromDB failed");
             }
         }
         catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
 
@@ -159,7 +162,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
     @Override
     public CompletableFuture<ProposeResult<StateMachine.Snapshot>> propose(int squadId, ByteString v, boolean ignoreLeader) {
-        long ballotId = ballotIdHolder.nextIdOf(squadId);
+        long ballotId = messageIdHolder.nextIdOf(squadId);
         return propose(squadId, new Event.BallotValue(ballotId, Event.ValueType.APPLICATION, v), ignoreLeader);
     }
 
@@ -215,12 +218,65 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
         NettyCommunicatorFactory factory = new NettyCommunicatorFactory(settings, this.eventWorkerPool, this.platoon::createConnectRequest);
         this.communicator = factory.createCommunicator();
 
+        new Thread(() -> {
+            try {
+                this.confirmPrelifeLastInstanceRouting();
+            }
+            catch (InterruptedException e) {
+                logger.error("Prelife confirming routing interrupted");
+            }
+        }, "PrelifeLastConfirming").start();
+
         this.node = new NettyJaxosServer(this.settings, this.eventWorkerPool);
         this.node.start();
     }
 
     public ScheduledExecutorService timerExecutor() {
         return this.timerExecutor;
+    }
+
+    private void confirmPrelifeLastInstanceRouting() throws InterruptedException {
+        GroupedRateLimiter rateLimiter = new GroupedRateLimiter(1.0 / 10.0);
+        Thread.sleep(1000);
+
+        while (true) {
+            boolean remain = false;
+            for (Squad squad : squads) {
+                if (squad.isPrelifeLastConfirmed()) {
+                    continue;
+                }
+                Instance i = squad.prelifeLastInstance();
+                CompletableFuture<ProposeResult<StateMachine.Snapshot>> future = new CompletableFuture<>();
+                squad.directPropose(i.id(), i.value(), future);
+                future.thenAccept(result -> {
+                    switch (result.code()) {
+                        case SUCCESS:
+                            try {
+                                squad.consume(i);
+                            }
+                            catch (IllegalStateException e) {
+
+                            }
+                            logger.info("The prelive last {} confirmed", i);
+                            break;
+                        default: {
+                            if (rateLimiter.tryAcquireFor(squad.id())) {
+                                logger.info("Confirm prelife last instance result in {}", result.errorMessage());
+                            }
+                        }
+                    }
+                });
+                remain = true;
+            }
+
+            if (remain) {
+                Thread.sleep(200);
+            }
+            else {
+                logger.info("Confirm prelife last finished for all squad");
+                break;
+            }
+        }
     }
 
     private void runForLeader() {
@@ -240,7 +296,9 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
         while (i < squadCountRange.getMaximum() && it.hasNext()) {
             int squadId = it.next();
             //logger.info("S{} compete for leader", squadId);
-            proposeForLeader(squadId);
+            if (this.squads[i].isPrelifeLastConfirmed()) {
+                proposeForLeader(squadId);
+            }
             i++;
         }
     }
@@ -272,14 +330,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
     }
 
     private void proposeForLeader(int squadId) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("S{} propose for leader", squadId);
-        }
-        this.eventWorkerPool.submitBackendTask(() -> execProposeForLeader(squadId));
-    }
-
-    private void execProposeForLeader(int squadId) {
-        long ballotId = ballotIdHolder.nextIdOf(squadId);
+        long ballotId = messageIdHolder.nextIdOf(squadId);
         Event.BallotValue v = new Event.BallotValue(ballotId, Event.ValueType.NOTHING, ByteString.EMPTY);
         this.propose(squadId, v, true)
                 .thenAccept(result -> {
@@ -326,17 +377,18 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         private volatile BitSet connectedPeers;
         private GroupedRateLimiter rateLimiter;
+
         public Platoon() {
             this.connectedPeers = new BitSet();
             //Itself is always connected, otherwise self-generated event can't be processed
             this.connectedPeers.set(settings.serverId());
-            this.rateLimiter = new GroupedRateLimiter(1.0/10.0);
+            this.rateLimiter = new GroupedRateLimiter(1.0 / 10.0);
         }
 
         @Override
         public Event processEvent(Event event) {
-            if(!state().equals(State.RUNNING)){
-                if(this.rateLimiter.tryAcquireFor(event.senderId())){
+            if (!state().equals(State.RUNNING)) {
+                if (this.rateLimiter.tryAcquireFor(event.senderId())) {
                     logger.info("Abandon events from {} due to not running", event.senderId());
                 }
                 return null;
@@ -351,7 +403,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
                 }
                 default: {
                     if (!connectedPeers.get(event.senderId())) {
-                        if(rateLimiter.tryAcquireFor(event.senderId())){
+                        if (rateLimiter.tryAcquireFor(event.senderId())) {
                             logger.info("Abandon events from {} due to not joined", event.senderId());
                         }
                         return null;
@@ -423,7 +475,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         private Event.JoinRequest createConnectRequest(int serverId) {
             JaxosSettings.Peer peer = settings.getPeer(serverId);
-            if(peer == null){
+            if (peer == null) {
                 throw new IllegalArgumentException("Given server id not in config " + serverId);
             }
 
@@ -494,28 +546,26 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
         }
     }
 
-    public static class BallotIdHolder {
+    public static class MessageIdHolder {
 
         private static class Item {
             private long highBits;
-            private int serialNum;
+            private AtomicInteger serialNum;
 
             public Item(int highBits) {
                 this.highBits = ((long) highBits) << 32;
-                this.serialNum = 0;
+                this.serialNum = new AtomicInteger(0);
             }
 
             public synchronized long nextId() {
-                long r = this.highBits | (this.serialNum & 0xffffffffL);
-                this.serialNum++;
-                return r;
+                return this.highBits | (this.serialNum.getAndIncrement() & 0xffffffffL);
             }
         }
 
         private int serverId;
         private Map<Integer, Item> itemMap = new ConcurrentHashMap<>();
 
-        public BallotIdHolder(int serverId) {
+        public MessageIdHolder(int serverId) {
             this.serverId = serverId;
         }
 

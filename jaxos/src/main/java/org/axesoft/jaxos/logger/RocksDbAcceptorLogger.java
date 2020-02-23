@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.*;
 
 /**
@@ -221,13 +220,9 @@ public class RocksDbAcceptorLogger implements AcceptorLogger {
 
         this.metrics.recordLoggerSaveCheckPointElapse(System.nanoTime() - t0);
 
-//        if(checkPoint.squadId() == this.squadCount -1 ) {
-//            logger.info(this.dbOptions.statistics().toString());
-//        }
-
-        if (deleteOldInstances && checkPoint.instanceId() > KEEP_OLD_LOG_NUM) {
+        if (deleteOldInstances && checkPoint.lastInstance().id() > KEEP_OLD_LOG_NUM) {
             byte[] lowKey = keyOfInstance(0);
-            byte[] highKey = keyOfInstance(checkPoint.instanceId() - KEEP_OLD_LOG_NUM);
+            byte[] highKey = keyOfInstance(checkPoint.lastInstance().id() - KEEP_OLD_LOG_NUM);
             deleteRange(checkPoint.squadId(), lowKey, highKey);
         }
     }

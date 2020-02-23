@@ -54,11 +54,6 @@ public class TansService implements StateMachine, HasMetrics {
     }
 
     @Override
-    public long currentVersion(int squadId) {
-        return this.numberMaps[squadId].currentVersion();
-    }
-
-    @Override
     public void consume(int squadId, long instanceId, ByteString proposal) {
         List<KeyLong> kx = proposal.isEmpty() ? Collections.emptyList() : fromProposal(proposal);
         if (logger.isTraceEnabled()) {
@@ -68,16 +63,15 @@ public class TansService implements StateMachine, HasMetrics {
     }
 
     @Override
-    public Pair<ByteString, Long> makeCheckPoint(int squadId) {
+    public ByteString makeCheckPoint(int squadId) {
         TansNumberMapSnapShot p = this.numberMaps[squadId].createSnapShot();
-        ByteString content = toCheckPoint(p.numbers());
-        return Pair.of(content, p.version());
+        return toCheckPoint(p.numbers());
     }
 
     @Override
-    public void restoreFromCheckPoint(int squadId, long version, ByteString checkPoint) {
+    public void restoreFromCheckPoint(int squadId, long instance, ByteString checkPoint) {
         List<TansNumber> nx = fromCheckPoint(checkPoint);
-        final long instanceId = version;
+        final long instanceId = instance;
         this.numberMaps[squadId].transFromCheckPoint(instanceId, nx);
     }
 

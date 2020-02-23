@@ -2,7 +2,9 @@ package org.axesoft.tans.server;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.*;
+import com.google.common.util.concurrent.AbstractExecutionThreadService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.RateLimiter;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -15,13 +17,14 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.util.CharsetUtil;
 import org.axesoft.jaxos.JaxosSettings;
-import org.axesoft.jaxos.base.*;
+import org.axesoft.jaxos.base.Either;
+import org.axesoft.jaxos.base.LongRange;
+import org.axesoft.jaxos.base.NumberedThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
@@ -179,7 +182,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 NUM_ARG_NAME, n);
 
         FullHttpResponse response = new DefaultFullHttpResponse(
-                HTTP_1_1, TEMPORARY_REDIRECT);
+                HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT);
         response.headers().set(HttpHeaderNames.LOCATION, url);
         return response;
     }
@@ -226,7 +229,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 if (ACQUIRE_PATH.equals(rawUrl)) {
                     Either<String, HttpAcquireRequest> either = parseAcquireRequest(request, this.keepAlive, ctx);
                     if (!either.isRight()) {
-                        FullHttpResponse r = HttpApiService.createResponse(ctx, BAD_REQUEST,either.getLeft());
+                        FullHttpResponse r = HttpApiService.createResponse(ctx, HttpResponseStatus.BAD_REQUEST,either.getLeft());
                         writeResponse(ctx, keepAlive, r);
                         return;
                     }
@@ -240,13 +243,13 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 }
                 else if (PARTITION_PATH.equals(rawUrl)) {
                     String s = Integer.toString(config.jaxConfig().partitionNumber());
-                    FullHttpResponse r = HttpApiService.createResponse(ctx, OK, s);
+                    FullHttpResponse r = HttpApiService.createResponse(ctx, HttpResponseStatus.OK, s);
                     writeResponse(ctx, keepAlive, r);
                 }
                 else if (METRICS_PATH.equals(rawUrl)) {
                     String s1 = tansService.formatMetrics();
                     String s2 = metrics.format();
-                    FullHttpResponse r = HttpApiService.createResponse(ctx, OK, s1, s2);
+                    FullHttpResponse r = HttpApiService.createResponse(ctx, HttpResponseStatus.OK, s1, s2);
                     writeResponse(ctx, false, r);
                 }
                 else {
@@ -313,7 +316,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
 
         private void send100Continue(ChannelHandlerContext ctx) {
-            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER.retainedDuplicate());
+            FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER.retainedDuplicate());
             ctx.write(response);
         }
 
@@ -422,7 +425,8 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 HttpAcquireRequest task = tasks.get(i);
                 FullHttpResponse response;
                 LongRange r = result.get(i);
-                response = createResponse(task.ctx, OK, task.keyLong.key(), ",", Long.toString(r.low()), ",", Long.toString(r.high()), "\r\n");
+                response = createResponse(task.ctx, HttpResponseStatus.OK,
+                        task.keyLong.key(), ",", Long.toString(r.low()), ",", Long.toString(r.high()), "\r\n");
                 if (logger.isTraceEnabled()) {
                     logger.trace("S{} write response {},{},{},{}", squadId,
                             task.keyLong.key(), task.keyLong.value(), r.low(), r.high());
@@ -450,7 +454,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
 
         private FullHttpResponse createResponseForError(String msg, ChannelHandlerContext ctx) {
-            return createResponse(ctx, INTERNAL_SERVER_ERROR, msg);
+            return createResponse(ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, msg, "\r\n");
 
 //            if (t instanceof ProposalConflictException) {
 //                return createResponse(HttpResponseStatus.CONFLICT, "CONFLICT");

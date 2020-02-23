@@ -36,7 +36,7 @@ are by netty
 * DONE Add metrics for acceptor 									:algo:
 * DONE metrics of process rate of TANS service should in each seconds 				     :network:
 * DONE Add metrics for logger 										 :log:
-* DONE add ring cache to logger						:log:
+* DONE add ring cache to logger 									 :log:
 * DONE delete logs after checkpoint created 								 :log:
 * DONE proposal give each value a unique message id for handling conflict 				:algo:
 * CANCELLED Improve the Velometer component, let compute return pair of (t, elapsed)		     :metrics:
@@ -50,16 +50,16 @@ are by netty
 * TODO nextProposal function of 201 should get 203 if sever id is 3					:algo:
 * TODO The ballot number may grow up to excced the limit of integer					:algo:
 * DONE Add token for protocol interfaces 				                             :network:
-* TODO Add token for TANS HTTP API 				    :network:
+* TODO Add token for TANS HTTP API 								     :network:
 * DONE Change config file from properties format to YAML format                                  :application:
 * DONE add metrics for size rocksdb file
 * DONE add individual metrics for rate of propose request, besides executed propose                  :metrics:
 * DONE use fully PooledDirectBuff for all network interfaces	                                     :network:
 * DONE change build tool from gradle to maven				                                 :dev:
-* TODO the last saved instance should be confirmed again after restarting                               :algo:
+* DONE the last saved instance should be confirmed again after restarting				:algo:
 * TODO Print version number in tans's splash message		                                        :base:
 * TODO Support deploy TANS in docker				                                  :deployment:
-  
+* Implement another logger backend directly on file  
 * Issues
 ** TODO [#C] Netty print ERROR message [[file:caselog/netty-error.log][logs]]
 ** TODO client hang when getting redirect to a not given server address 			      :client:

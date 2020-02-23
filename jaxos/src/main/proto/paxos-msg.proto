@@ -111,7 +111,6 @@ message AcceptedNotify {
 message LearnReq {
   int32 squadId = 1;
   int64 lowInstanceId = 2;
-  int64 highInstanceId = 3;
 }
 
 message LearnRes {
@@ -134,9 +133,8 @@ message SquadChosen {
 
 message CheckPoint {
   int32 squadId = 1;
-  int64 instanceId = 2;
-  int64 timestamp = 3;
-  bytes content = 4;
-  Instance lastInstance = 5;
+  int64 timestamp = 2;
+  bytes content = 3;
+  Instance lastInstance = 4;
 }
 

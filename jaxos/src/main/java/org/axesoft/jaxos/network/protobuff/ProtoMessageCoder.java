@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
-    public static final String MESSAGE_VERSION = "0.1.1";
+    public static final String MESSAGE_VERSION = "0.1.2";
 
     private static Logger logger = LoggerFactory.getLogger(ProtoMessageCoder.class);
 
@@ -197,7 +197,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
         return PaxosMessage.LearnReq.newBuilder()
                 .setSquadId(req.squadId())
                 .setLowInstanceId(req.lowInstanceId())
-                .setHighInstanceId(req.highInstanceId())
                 .build()
                 .toByteString();
     }
@@ -217,7 +216,6 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     public PaxosMessage.CheckPoint encodeCheckPoint(CheckPoint checkPoint) {
         PaxosMessage.CheckPoint.Builder builder = PaxosMessage.CheckPoint.newBuilder();
         builder.setSquadId(checkPoint.squadId())
-                .setInstanceId(checkPoint.instanceId())
                 .setTimestamp(checkPoint.timestamp())
                 .setContent(checkPoint.content())
                 .setLastInstance(encodeInstance(checkPoint.lastInstance()));
@@ -337,7 +335,7 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
 
     private Event decodeLearnReq(PaxosMessage.DataGram dataGram) throws InvalidProtocolBufferException {
         PaxosMessage.LearnReq req = PaxosMessage.LearnReq.parseFrom(dataGram.getBody());
-        return new Event.Learn(dataGram.getSender(), req.getSquadId(), req.getLowInstanceId(), req.getHighInstanceId());
+        return new Event.Learn(dataGram.getSender(), req.getSquadId(), req.getLowInstanceId());
     }
 
     private Event decodeLearnResponse(PaxosMessage.DataGram dataGram) throws InvalidProtocolBufferException {
@@ -390,7 +388,7 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     }
 
     public CheckPoint decodeCheckPoint(PaxosMessage.CheckPoint checkPoint) {
-        return new CheckPoint(checkPoint.getSquadId(), checkPoint.getInstanceId(),
-                checkPoint.getTimestamp(), checkPoint.getContent(), decodeInstance(checkPoint.getLastInstance()));
+        return new CheckPoint(checkPoint.getSquadId(), checkPoint.getTimestamp(),
+                checkPoint.getContent(), decodeInstance(checkPoint.getLastInstance()));
     }
 }

@@ -7940,11 +7940,6 @@ public final class PaxosMessage {
      * <code>optional int64 lowInstanceId = 2;</code>
      */
     long getLowInstanceId();
-
-    /**
-     * <code>optional int64 highInstanceId = 3;</code>
-     */
-    long getHighInstanceId();
   }
   /**
    * Protobuf type {@code org.axesoft.jaxos.network.protobuff.LearnReq}
@@ -7960,7 +7955,6 @@ public final class PaxosMessage {
     private LearnReq() {
       squadId_ = 0;
       lowInstanceId_ = 0L;
-      highInstanceId_ = 0L;
     }
 
     @java.lang.Override
@@ -7996,11 +7990,6 @@ public final class PaxosMessage {
             case 16: {
 
               lowInstanceId_ = input.readInt64();
-              break;
-            }
-            case 24: {
-
-              highInstanceId_ = input.readInt64();
               break;
             }
           }
@@ -8044,15 +8033,6 @@ public final class PaxosMessage {
       return lowInstanceId_;
     }
 
-    public static final int HIGHINSTANCEID_FIELD_NUMBER = 3;
-    private long highInstanceId_;
-    /**
-     * <code>optional int64 highInstanceId = 3;</code>
-     */
-    public long getHighInstanceId() {
-      return highInstanceId_;
-    }
-
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -8071,9 +8051,6 @@ public final class PaxosMessage {
       if (lowInstanceId_ != 0L) {
         output.writeInt64(2, lowInstanceId_);
       }
-      if (highInstanceId_ != 0L) {
-        output.writeInt64(3, highInstanceId_);
-      }
     }
 
     public int getSerializedSize() {
@@ -8088,10 +8065,6 @@ public final class PaxosMessage {
       if (lowInstanceId_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(2, lowInstanceId_);
-      }
-      if (highInstanceId_ != 0L) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(3, highInstanceId_);
       }
       memoizedSize = size;
       return size;
@@ -8113,8 +8086,6 @@ public final class PaxosMessage {
           == other.getSquadId());
       result = result && (getLowInstanceId()
           == other.getLowInstanceId());
-      result = result && (getHighInstanceId()
-          == other.getHighInstanceId());
       return result;
     }
 
@@ -8130,9 +8101,6 @@ public final class PaxosMessage {
       hash = (37 * hash) + LOWINSTANCEID_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getLowInstanceId());
-      hash = (37 * hash) + HIGHINSTANCEID_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getHighInstanceId());
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -8255,8 +8223,6 @@ public final class PaxosMessage {
 
         lowInstanceId_ = 0L;
 
-        highInstanceId_ = 0L;
-
         return this;
       }
 
@@ -8281,7 +8247,6 @@ public final class PaxosMessage {
         org.axesoft.jaxos.network.protobuff.PaxosMessage.LearnReq result = new org.axesoft.jaxos.network.protobuff.PaxosMessage.LearnReq(this);
         result.squadId_ = squadId_;
         result.lowInstanceId_ = lowInstanceId_;
-        result.highInstanceId_ = highInstanceId_;
         onBuilt();
         return result;
       }
@@ -8328,9 +8293,6 @@ public final class PaxosMessage {
         }
         if (other.getLowInstanceId() != 0L) {
           setLowInstanceId(other.getLowInstanceId());
-        }
-        if (other.getHighInstanceId() != 0L) {
-          setHighInstanceId(other.getHighInstanceId());
         }
         onChanged();
         return this;
@@ -8406,32 +8368,6 @@ public final class PaxosMessage {
       public Builder clearLowInstanceId() {
         
         lowInstanceId_ = 0L;
-        onChanged();
-        return this;
-      }
-
-      private long highInstanceId_ ;
-      /**
-       * <code>optional int64 highInstanceId = 3;</code>
-       */
-      public long getHighInstanceId() {
-        return highInstanceId_;
-      }
-      /**
-       * <code>optional int64 highInstanceId = 3;</code>
-       */
-      public Builder setHighInstanceId(long value) {
-        
-        highInstanceId_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional int64 highInstanceId = 3;</code>
-       */
-      public Builder clearHighInstanceId() {
-        
-        highInstanceId_ = 0L;
         onChanged();
         return this;
       }
@@ -10732,30 +10668,25 @@ public final class PaxosMessage {
     int getSquadId();
 
     /**
-     * <code>optional int64 instanceId = 2;</code>
-     */
-    long getInstanceId();
-
-    /**
-     * <code>optional int64 timestamp = 3;</code>
+     * <code>optional int64 timestamp = 2;</code>
      */
     long getTimestamp();
 
     /**
-     * <code>optional bytes content = 4;</code>
+     * <code>optional bytes content = 3;</code>
      */
     com.google.protobuf.ByteString getContent();
 
     /**
-     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
      */
     boolean hasLastInstance();
     /**
-     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
      */
     org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance getLastInstance();
     /**
-     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
      */
     org.axesoft.jaxos.network.protobuff.PaxosMessage.InstanceOrBuilder getLastInstanceOrBuilder();
   }
@@ -10772,7 +10703,6 @@ public final class PaxosMessage {
     }
     private CheckPoint() {
       squadId_ = 0;
-      instanceId_ = 0L;
       timestamp_ = 0L;
       content_ = com.google.protobuf.ByteString.EMPTY;
     }
@@ -10809,20 +10739,15 @@ public final class PaxosMessage {
             }
             case 16: {
 
-              instanceId_ = input.readInt64();
-              break;
-            }
-            case 24: {
-
               timestamp_ = input.readInt64();
               break;
             }
-            case 34: {
+            case 26: {
 
               content_ = input.readBytes();
               break;
             }
-            case 42: {
+            case 34: {
               org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance.Builder subBuilder = null;
               if (lastInstance_ != null) {
                 subBuilder = lastInstance_.toBuilder();
@@ -10867,49 +10792,40 @@ public final class PaxosMessage {
       return squadId_;
     }
 
-    public static final int INSTANCEID_FIELD_NUMBER = 2;
-    private long instanceId_;
-    /**
-     * <code>optional int64 instanceId = 2;</code>
-     */
-    public long getInstanceId() {
-      return instanceId_;
-    }
-
-    public static final int TIMESTAMP_FIELD_NUMBER = 3;
+    public static final int TIMESTAMP_FIELD_NUMBER = 2;
     private long timestamp_;
     /**
-     * <code>optional int64 timestamp = 3;</code>
+     * <code>optional int64 timestamp = 2;</code>
      */
     public long getTimestamp() {
       return timestamp_;
     }
 
-    public static final int CONTENT_FIELD_NUMBER = 4;
+    public static final int CONTENT_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString content_;
     /**
-     * <code>optional bytes content = 4;</code>
+     * <code>optional bytes content = 3;</code>
      */
     public com.google.protobuf.ByteString getContent() {
       return content_;
     }
 
-    public static final int LASTINSTANCE_FIELD_NUMBER = 5;
+    public static final int LASTINSTANCE_FIELD_NUMBER = 4;
     private org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance lastInstance_;
     /**
-     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
      */
     public boolean hasLastInstance() {
       return lastInstance_ != null;
     }
     /**
-     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
      */
     public org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance getLastInstance() {
       return lastInstance_ == null ? org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance.getDefaultInstance() : lastInstance_;
     }
     /**
-     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+     * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
      */
     public org.axesoft.jaxos.network.protobuff.PaxosMessage.InstanceOrBuilder getLastInstanceOrBuilder() {
       return getLastInstance();
@@ -10930,17 +10846,14 @@ public final class PaxosMessage {
       if (squadId_ != 0) {
         output.writeInt32(1, squadId_);
       }
-      if (instanceId_ != 0L) {
-        output.writeInt64(2, instanceId_);
-      }
       if (timestamp_ != 0L) {
-        output.writeInt64(3, timestamp_);
+        output.writeInt64(2, timestamp_);
       }
       if (!content_.isEmpty()) {
-        output.writeBytes(4, content_);
+        output.writeBytes(3, content_);
       }
       if (lastInstance_ != null) {
-        output.writeMessage(5, getLastInstance());
+        output.writeMessage(4, getLastInstance());
       }
     }
 
@@ -10953,21 +10866,17 @@ public final class PaxosMessage {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(1, squadId_);
       }
-      if (instanceId_ != 0L) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(2, instanceId_);
-      }
       if (timestamp_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(3, timestamp_);
+          .computeInt64Size(2, timestamp_);
       }
       if (!content_.isEmpty()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(4, content_);
+          .computeBytesSize(3, content_);
       }
       if (lastInstance_ != null) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(5, getLastInstance());
+          .computeMessageSize(4, getLastInstance());
       }
       memoizedSize = size;
       return size;
@@ -10987,8 +10896,6 @@ public final class PaxosMessage {
       boolean result = true;
       result = result && (getSquadId()
           == other.getSquadId());
-      result = result && (getInstanceId()
-          == other.getInstanceId());
       result = result && (getTimestamp()
           == other.getTimestamp());
       result = result && getContent()
@@ -11010,9 +10917,6 @@ public final class PaxosMessage {
       hash = (19 * hash) + getDescriptorForType().hashCode();
       hash = (37 * hash) + SQUADID_FIELD_NUMBER;
       hash = (53 * hash) + getSquadId();
-      hash = (37 * hash) + INSTANCEID_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getInstanceId());
       hash = (37 * hash) + TIMESTAMP_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getTimestamp());
@@ -11142,8 +11046,6 @@ public final class PaxosMessage {
         super.clear();
         squadId_ = 0;
 
-        instanceId_ = 0L;
-
         timestamp_ = 0L;
 
         content_ = com.google.protobuf.ByteString.EMPTY;
@@ -11177,7 +11079,6 @@ public final class PaxosMessage {
       public org.axesoft.jaxos.network.protobuff.PaxosMessage.CheckPoint buildPartial() {
         org.axesoft.jaxos.network.protobuff.PaxosMessage.CheckPoint result = new org.axesoft.jaxos.network.protobuff.PaxosMessage.CheckPoint(this);
         result.squadId_ = squadId_;
-        result.instanceId_ = instanceId_;
         result.timestamp_ = timestamp_;
         result.content_ = content_;
         if (lastInstanceBuilder_ == null) {
@@ -11228,9 +11129,6 @@ public final class PaxosMessage {
         if (other == org.axesoft.jaxos.network.protobuff.PaxosMessage.CheckPoint.getDefaultInstance()) return this;
         if (other.getSquadId() != 0) {
           setSquadId(other.getSquadId());
-        }
-        if (other.getInstanceId() != 0L) {
-          setInstanceId(other.getInstanceId());
         }
         if (other.getTimestamp() != 0L) {
           setTimestamp(other.getTimestamp());
@@ -11293,41 +11191,15 @@ public final class PaxosMessage {
         return this;
       }
 
-      private long instanceId_ ;
-      /**
-       * <code>optional int64 instanceId = 2;</code>
-       */
-      public long getInstanceId() {
-        return instanceId_;
-      }
-      /**
-       * <code>optional int64 instanceId = 2;</code>
-       */
-      public Builder setInstanceId(long value) {
-        
-        instanceId_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional int64 instanceId = 2;</code>
-       */
-      public Builder clearInstanceId() {
-        
-        instanceId_ = 0L;
-        onChanged();
-        return this;
-      }
-
       private long timestamp_ ;
       /**
-       * <code>optional int64 timestamp = 3;</code>
+       * <code>optional int64 timestamp = 2;</code>
        */
       public long getTimestamp() {
         return timestamp_;
       }
       /**
-       * <code>optional int64 timestamp = 3;</code>
+       * <code>optional int64 timestamp = 2;</code>
        */
       public Builder setTimestamp(long value) {
         
@@ -11336,7 +11208,7 @@ public final class PaxosMessage {
         return this;
       }
       /**
-       * <code>optional int64 timestamp = 3;</code>
+       * <code>optional int64 timestamp = 2;</code>
        */
       public Builder clearTimestamp() {
         
@@ -11347,13 +11219,13 @@ public final class PaxosMessage {
 
       private com.google.protobuf.ByteString content_ = com.google.protobuf.ByteString.EMPTY;
       /**
-       * <code>optional bytes content = 4;</code>
+       * <code>optional bytes content = 3;</code>
        */
       public com.google.protobuf.ByteString getContent() {
         return content_;
       }
       /**
-       * <code>optional bytes content = 4;</code>
+       * <code>optional bytes content = 3;</code>
        */
       public Builder setContent(com.google.protobuf.ByteString value) {
         if (value == null) {
@@ -11365,7 +11237,7 @@ public final class PaxosMessage {
         return this;
       }
       /**
-       * <code>optional bytes content = 4;</code>
+       * <code>optional bytes content = 3;</code>
        */
       public Builder clearContent() {
         
@@ -11378,13 +11250,13 @@ public final class PaxosMessage {
       private com.google.protobuf.SingleFieldBuilderV3<
           org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance, org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance.Builder, org.axesoft.jaxos.network.protobuff.PaxosMessage.InstanceOrBuilder> lastInstanceBuilder_;
       /**
-       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
        */
       public boolean hasLastInstance() {
         return lastInstanceBuilder_ != null || lastInstance_ != null;
       }
       /**
-       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
        */
       public org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance getLastInstance() {
         if (lastInstanceBuilder_ == null) {
@@ -11394,7 +11266,7 @@ public final class PaxosMessage {
         }
       }
       /**
-       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
        */
       public Builder setLastInstance(org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance value) {
         if (lastInstanceBuilder_ == null) {
@@ -11410,7 +11282,7 @@ public final class PaxosMessage {
         return this;
       }
       /**
-       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
        */
       public Builder setLastInstance(
           org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance.Builder builderForValue) {
@@ -11424,7 +11296,7 @@ public final class PaxosMessage {
         return this;
       }
       /**
-       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
        */
       public Builder mergeLastInstance(org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance value) {
         if (lastInstanceBuilder_ == null) {
@@ -11442,7 +11314,7 @@ public final class PaxosMessage {
         return this;
       }
       /**
-       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
        */
       public Builder clearLastInstance() {
         if (lastInstanceBuilder_ == null) {
@@ -11456,7 +11328,7 @@ public final class PaxosMessage {
         return this;
       }
       /**
-       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
        */
       public org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance.Builder getLastInstanceBuilder() {
         
@@ -11464,7 +11336,7 @@ public final class PaxosMessage {
         return getLastInstanceFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
        */
       public org.axesoft.jaxos.network.protobuff.PaxosMessage.InstanceOrBuilder getLastInstanceOrBuilder() {
         if (lastInstanceBuilder_ != null) {
@@ -11475,7 +11347,7 @@ public final class PaxosMessage {
         }
       }
       /**
-       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 5;</code>
+       * <code>optional .org.axesoft.jaxos.network.protobuff.Instance lastInstance = 4;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance, org.axesoft.jaxos.network.protobuff.PaxosMessage.Instance.Builder, org.axesoft.jaxos.network.protobuff.PaxosMessage.InstanceOrBuilder> 
@@ -11660,28 +11532,26 @@ public final class PaxosMessage {
       "2/.org.axesoft.jaxos.network.protobuff.C" +
       "hosenInfo\"Y\n\016AcceptedNotify\022\017\n\007squadId\030\001" +
       " \001(\005\022\022\n\ninstanceId\030\002 \001(\003\022\020\n\010proposal\030\003 \001" +
-      "(\005\022\020\n\010ballotId\030\004 \001(\003\"J\n\010LearnReq\022\017\n\007squa" +
-      "dId\030\001 \001(\005\022\025\n\rlowInstanceId\030\002 \001(\003\022\026\n\016high" +
-      "InstanceId\030\003 \001(\003\"\241\001\n\010LearnRes\022\017\n\007squadId",
-      "\030\001 \001(\005\022?\n\010instance\030\002 \003(\0132-.org.axesoft.j" +
-      "axos.network.protobuff.Instance\022C\n\ncheck" +
-      "Point\030\003 \001(\0132/.org.axesoft.jaxos.network." +
-      "protobuff.CheckPoint\"\202\001\n\010Instance\022\017\n\007squ" +
-      "adId\030\001 \001(\005\022\022\n\ninstanceId\030\002 \001(\003\022\020\n\010propos" +
-      "al\030\003 \001(\005\022?\n\005value\030\004 \001(\01320.org.axesoft.ja" +
-      "xos.network.protobuff.BallotValue\"2\n\013Squ" +
-      "adChosen\022\017\n\007squadId\030\001 \001(\005\022\022\n\ninstanceId\030" +
-      "\002 \001(\003\"\232\001\n\nCheckPoint\022\017\n\007squadId\030\001 \001(\005\022\022\n" +
-      "\ninstanceId\030\002 \001(\003\022\021\n\ttimestamp\030\003 \001(\003\022\017\n\007",
-      "content\030\004 \001(\014\022C\n\014lastInstance\030\005 \001(\0132-.or" +
-      "g.axesoft.jaxos.network.protobuff.Instan" +
-      "ce*\237\001\n\004Code\022\010\n\004NONE\020\000\022\014\n\010JOIN_REQ\020\001\022\014\n\010J" +
-      "OIN_RES\020\002\022\017\n\013PREPARE_REQ\020\003\022\017\n\013PREPARE_RE" +
-      "S\020\004\022\016\n\nACCEPT_REQ\020\005\022\016\n\nACCEPT_RES\020\006\022\021\n\rC" +
-      "HOSEN_NOTIFY\020\007\022\r\n\tLEARN_REQ\020\013\022\r\n\tLEARN_R" +
-      "ES\020\014*3\n\tValueType\022\013\n\007NOTHING\020\000\022\017\n\013APPLIC" +
-      "ATION\020\001\022\010\n\004NOOP\020\002B\016B\014PaxosMessageb\006proto" +
-      "3"
+      "(\005\022\020\n\010ballotId\030\004 \001(\003\"2\n\010LearnReq\022\017\n\007squa" +
+      "dId\030\001 \001(\005\022\025\n\rlowInstanceId\030\002 \001(\003\"\241\001\n\010Lea" +
+      "rnRes\022\017\n\007squadId\030\001 \001(\005\022?\n\010instance\030\002 \003(\013",
+      "2-.org.axesoft.jaxos.network.protobuff.I" +
+      "nstance\022C\n\ncheckPoint\030\003 \001(\0132/.org.axesof" +
+      "t.jaxos.network.protobuff.CheckPoint\"\202\001\n" +
+      "\010Instance\022\017\n\007squadId\030\001 \001(\005\022\022\n\ninstanceId" +
+      "\030\002 \001(\003\022\020\n\010proposal\030\003 \001(\005\022?\n\005value\030\004 \001(\0132" +
+      "0.org.axesoft.jaxos.network.protobuff.Ba" +
+      "llotValue\"2\n\013SquadChosen\022\017\n\007squadId\030\001 \001(" +
+      "\005\022\022\n\ninstanceId\030\002 \001(\003\"\206\001\n\nCheckPoint\022\017\n\007" +
+      "squadId\030\001 \001(\005\022\021\n\ttimestamp\030\002 \001(\003\022\017\n\007cont" +
+      "ent\030\003 \001(\014\022C\n\014lastInstance\030\004 \001(\0132-.org.ax",
+      "esoft.jaxos.network.protobuff.Instance*\237" +
+      "\001\n\004Code\022\010\n\004NONE\020\000\022\014\n\010JOIN_REQ\020\001\022\014\n\010JOIN_" +
+      "RES\020\002\022\017\n\013PREPARE_REQ\020\003\022\017\n\013PREPARE_RES\020\004\022" +
+      "\016\n\nACCEPT_REQ\020\005\022\016\n\nACCEPT_RES\020\006\022\021\n\rCHOSE" +
+      "N_NOTIFY\020\007\022\r\n\tLEARN_REQ\020\013\022\r\n\tLEARN_RES\020\014" +
+      "*3\n\tValueType\022\013\n\007NOTHING\020\000\022\017\n\013APPLICATIO" +
+      "N\020\001\022\010\n\004NOOP\020\002B\016B\014PaxosMessageb\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -11760,7 +11630,7 @@ public final class PaxosMessage {
     internal_static_org_axesoft_jaxos_network_protobuff_LearnReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_org_axesoft_jaxos_network_protobuff_LearnReq_descriptor,
-        new java.lang.String[] { "SquadId", "LowInstanceId", "HighInstanceId", });
+        new java.lang.String[] { "SquadId", "LowInstanceId", });
     internal_static_org_axesoft_jaxos_network_protobuff_LearnRes_descriptor =
       getDescriptor().getMessageTypes().get(11);
     internal_static_org_axesoft_jaxos_network_protobuff_LearnRes_fieldAccessorTable = new
@@ -11784,7 +11654,7 @@ public final class PaxosMessage {
     internal_static_org_axesoft_jaxos_network_protobuff_CheckPoint_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_org_axesoft_jaxos_network_protobuff_CheckPoint_descriptor,
-        new java.lang.String[] { "SquadId", "InstanceId", "Timestamp", "Content", "LastInstance", });
+        new java.lang.String[] { "SquadId", "Timestamp", "Content", "LastInstance", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

@@ -40,6 +40,8 @@ public class Squad implements EventDispatcher {
     private Timeout learnTimeout;
     private long timestampOfLearnReq;
 
+    private volatile Instance preLifeLastInstance;
+
     private BlockingQueue<ProposeRequest> proposeRequestQueue = new LinkedBlockingQueue<>(10 * 1024);
 
 
@@ -78,6 +80,14 @@ public class Squad implements EventDispatcher {
         return this.context;
     }
 
+    public Instance prelifeLastInstance() {
+        return this.preLifeLastInstance;
+    }
+
+    public boolean isPrelifeLastConfirmed() {
+        return this.preLifeLastInstance.id() <= this.context.chosenInstanceId();
+    }
+
     /**
      * @param v value to be proposed
      * @throws InterruptedException
@@ -100,7 +110,7 @@ public class Squad implements EventDispatcher {
                 break;
             }
             //client can cancel the propose request due to timeout or other reason.
-            if(request.resultFuture.isDone()){
+            if (request.resultFuture.isDone()) {
                 continue;
             }
             if (this.context.isOtherLeaderActive() && this.settings.leaderOnly() && !request.ignoreLeader) {
@@ -110,15 +120,23 @@ public class Squad implements EventDispatcher {
                 request.resultFuture.complete(ProposeResult.redirectTo(this.context.lastProposer()));
             }
             else {
-                boolean accepted = proposer.propose(request.value, request.resultFuture);
+                boolean accepted = proposer.propose(this.context.chosenInstanceId() + 1, request.value, request.resultFuture);
                 //In fact, not accepted should not happen if no bug
                 //If so, it means another caller call this function out of the workpool.event process thread
-                if(!accepted){
+                if (!accepted) {
                     proposeRequestQueue.offer(request);
                     break;
                 }
             }
         }
+    }
+
+    public void directPropose(long instanceId, Event.BallotValue value, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
+        components.getWorkerPool().queueTask(context.squadId(), () -> {
+            if (!proposer.propose(instanceId, value, resultFuture)) {
+                resultFuture.complete(ProposeResult.fail("another propose is running"));
+            }
+        });
     }
 
     @Override
@@ -135,11 +153,6 @@ public class Squad implements EventDispatcher {
             throw new UnsupportedOperationException("Unknown event type of " + request.code());
         }
     }
-
-    public long lastChosenInstanceId() {
-        return this.context.chosenInstanceId();
-    }
-
 
     private Event.BallotEvent processBallotEvent(Event.BallotEvent event) {
         switch (event.code()) {
@@ -216,14 +229,14 @@ public class Squad implements EventDispatcher {
             if ((this.context.chosenInstanceId() + 1 < chosenInfo.instanceId()) ||
                     (this.context.chosenInstanceId() < chosenInfo.instanceId()
                             && chosenInfo.elapsedMillis() >= 1000)) {
-                startLearn(receivedEvent.senderId(), this.context.chosenInstanceId(), chosenInfo.instanceId());
+                startLearn(receivedEvent.senderId(), this.context.chosenInstanceId());
             }
         }
     }
 
-    private void startLearn(int senderId, long myLast, long otherLast) {
+    private void startLearn(int senderId, long myLast) {
         this.components.getWorkerPool().queueTask(context().squadId(), () -> {
-            Event.Learn learn = new Event.Learn(settings.serverId(), context.squadId(), myLast + 1, otherLast);
+            Event.Learn learn = new Event.Learn(settings.serverId(), context.squadId(), myLast + 1);
             this.components.getCommunicator().send(learn, senderId);
             logger.info("S{} Sent learn request {} to server {}", context.squadId(), learn, senderId);
         });
@@ -279,7 +292,7 @@ public class Squad implements EventDispatcher {
 
     private void onLearnResponse(Event.LearnResponse response) {
         logger.info("S{} learn CheckPoint {} with {} instances from {} to {}",
-                context.squadId(), response.checkPoint().instanceId(),
+                context.squadId(), response.checkPoint().lastInstance().id(),
                 response.highInstanceId() == 0 ? 0 : response.highInstanceId() - response.lowInstanceId() + 1,
                 response.lowInstanceId(), response.highInstanceId());
 
@@ -322,25 +335,36 @@ public class Squad implements EventDispatcher {
 
     public void restoreFromDB() {
         CheckPoint checkPoint = this.components.getLogger().loadLastCheckPoint(context.squadId());
-        Instance last = checkPoint.lastInstance();
-        Instance expectedLast = this.components.getLogger().loadLastInstance(context.squadId());
+        this.stateMachineRunner.restoreFromCheckPoint(checkPoint, Collections.emptyList());
 
-        //When last is empty(id is 0), this loop do nothing
-        List<Instance> ix = new ArrayList<>();
-        for (long i = checkPoint.instanceId() + 1; i <= expectedLast.id(); i++) {
-            Instance instance = this.components.getLogger().loadInstance(context.squadId(), i);
-            //It happens rarely
-            if (instance.isEmpty()) {
-                logger.warn("S{} Instance {} not found in DB, with checkPoint({}) last({}) ", context.squadId(), i, checkPoint.instanceId(), expectedLast.id());
-                break;
-            }
-            last = instance;
-            ix.add(instance);
+        Instance lastInstance = this.components.getLogger().loadInstance(context.squadId(), checkPoint.lastInstance().id() + 1);
+        Instance appliedInstance = checkPoint.lastInstance();
+        if (!lastInstance.isEmpty()) {
+            Instance nextInstance;
+            do {
+                nextInstance = this.components.getLogger().loadInstance(context.squadId(), lastInstance.id() + 1);
+                if (!nextInstance.isEmpty()) {
+                    this.stateMachineRunner.learnValue(lastInstance);
+                    appliedInstance = lastInstance;
+                    lastInstance = nextInstance;
+                }
+            } while (!nextInstance.isEmpty());
         }
 
-        this.stateMachineRunner.restoreFromCheckPoint(checkPoint, ix);
-        this.context.recordChosenInfo(0, last.id(), last.value().id(), last.proposal());
+        //For lastInstance
+        //The stored last instance may be an accepted value or just a prepare message.
+        //If it's an accepted value, we don't know whether it has been chosen or not. it should be confirmed
+        //If it's just a prepare message, no need to confirm it again and only let acceptor restore the state from it
+        this.preLifeLastInstance = lastInstance.value().isEmpty() ? appliedInstance : lastInstance;
 
-        logger.info("S{} restored to instance {}", context.squadId(), last.id());
+        this.context.recordChosenInfo(0, appliedInstance.id(), appliedInstance.value().id(), appliedInstance.proposal());
+        this.acceptor.restore(lastInstance);
+
+        String confirmMessage = lastInstance.isEmpty() || lastInstance.value().isEmpty() ? "NONE" : lastInstance.toString();
+        logger.info("S{} restored to instance {}, to be confirmed {}", context.squadId(), appliedInstance.id(), confirmMessage);
+    }
+
+    public void consume(Instance i) {
+        this.stateMachineRunner.learnValue(i);
     }
 }

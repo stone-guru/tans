@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 public class ProposerTest {
     @Test
     public void testBallotId1() throws Exception {
-        JaxosService.BallotIdHolder holder = new JaxosService.BallotIdHolder (7);
+        JaxosService.MessageIdHolder holder = new JaxosService.MessageIdHolder(7);
         long i1 = holder.nextIdOf(2);
         //System.out.println(String.format("%X", i1));
 
@@ -25,7 +25,7 @@ public class ProposerTest {
 
     @Ignore
     public void testBallotId2() throws Exception {
-        JaxosService.BallotIdHolder holder = new JaxosService.BallotIdHolder (7);
+        JaxosService.MessageIdHolder holder = new JaxosService.MessageIdHolder(7);
         for(int i = 0;i < Integer.MAX_VALUE; i++){
             holder.nextIdOf(3);
         }

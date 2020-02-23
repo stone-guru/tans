@@ -78,12 +78,12 @@ public class Proposer {
     }
 
 
-    public boolean propose(Event.BallotValue value, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
+    public boolean propose(long instanceId, Event.BallotValue value, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
         synchronized (resultFutureRef) {
             if (!resultFutureRef.compareAndSet(null, resultFuture)) {
                 String currentMsg = String.format("I%d %s", this.instanceId, this.proposeValue.toString());
                 String requestMsg = String.format("S%d I%d %s", context.squadId(), instanceId, value.toString());
-                logger.error("S{} Previous propose not end ({}) for {}", context.squadId(), currentMsg, requestMsg);
+                logger.warn("S{} Previous propose not end ({}) for {}", context.squadId(), currentMsg, requestMsg);
                 return false;
             }
         }
@@ -93,7 +93,7 @@ public class Proposer {
             return true;
         }
 
-        this.instanceId = this.context.chosenInstanceId() + 1;
+        this.instanceId = instanceId;
         this.proposeValue = value;
         this.round = 0;
         this.proposeStartTimestamp = System.nanoTime();

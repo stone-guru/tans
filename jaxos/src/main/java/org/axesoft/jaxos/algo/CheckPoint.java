@@ -8,17 +8,15 @@ import java.util.Date;
 
 
 public class CheckPoint implements Serializable {
-    public static CheckPoint EMPTY = new CheckPoint(0, 0, 0, ByteString.EMPTY, Instance.emptyOf(0));
+    public static CheckPoint EMPTY = new CheckPoint(0, 0, ByteString.EMPTY, Instance.emptyOf(0));
 
     private int squadId;
-    private long instanceId;
     private long timestamp;
     private ByteString content;
     private Instance lastInstance;
 
-    public CheckPoint(int squadId, long instanceId, long timestamp, ByteString content, Instance lastInstance) {
+    public CheckPoint(int squadId, long timestamp, ByteString content, Instance lastInstance) {
         this.squadId = squadId;
-        this.instanceId = instanceId;
         this.timestamp = timestamp;
         this.content = content;
         this.lastInstance = lastInstance;
@@ -26,10 +24,6 @@ public class CheckPoint implements Serializable {
 
     public int squadId(){
         return this.squadId;
-    }
-
-    public long instanceId(){
-        return this.instanceId;
     }
 
     public long timestamp(){
@@ -41,7 +35,7 @@ public class CheckPoint implements Serializable {
     }
 
     public boolean isEmpty(){
-        return this.instanceId == 0;
+        return this.lastInstance.isEmpty();
     }
 
     public Instance lastInstance(){
@@ -52,10 +46,9 @@ public class CheckPoint implements Serializable {
     public String toString() {
         return String.format("CheckPoint{" +
                 "squadId=" + squadId +
-                ", version=" + instanceId +
                 ", timestamp=" + new DateFormater().format(new Date(timestamp))+
                 ", content=BX[" + content.size() + "]" +
-                ", lastInstance=" + this.lastInstance +
+                ", instanceId=" + this.lastInstance.id() +
                 '}');
     }
 }

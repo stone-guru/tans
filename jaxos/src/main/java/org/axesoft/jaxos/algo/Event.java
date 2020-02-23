@@ -252,6 +252,10 @@ public abstract class Event {
             return this.content;
         }
 
+        public boolean isEmpty(){
+            return id == 0;
+        }
+
         @Override
         public String toString() {
             return "BallotValue{" +  Long.toHexString(id).toUpperCase()  + ", " + type + ", b[" + content.size() + "]}";
@@ -615,13 +619,11 @@ public abstract class Event {
 
     public static class Learn extends InstanceEvent {
         private int squadId;
-        private long highInstanceId;
         private long lowInstanceId;
 
-        public Learn(int senderId, int squadId, long lowInstanceId, long highInstanceId) {
+        public Learn(int senderId, int squadId, long lowInstanceId) {
             super(senderId);
             this.squadId = squadId;
-            this.highInstanceId = highInstanceId;
             this.lowInstanceId = lowInstanceId;
         }
 
@@ -639,17 +641,12 @@ public abstract class Event {
             return this.lowInstanceId;
         }
 
-        public long highInstanceId() {
-            return this.highInstanceId;
-        }
-
         @Override
         public String toString() {
             return "Learn{" +
                     "senderId=" + super.senderId() +
                     ", squadId=" + this.squadId +
                     ", lowInstanceId=" + this.lowInstanceId +
-                    ", highInstanceId=" + this.highInstanceId +
                     '}';
         }
     }

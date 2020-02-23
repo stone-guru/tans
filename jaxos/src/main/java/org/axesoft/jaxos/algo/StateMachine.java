@@ -8,16 +8,13 @@ public interface StateMachine {
     interface Snapshot {
 
     }
-
-    long currentVersion(int squadId);
-
     void consume(int squadId, long instanceId, ByteString message);
 
     void close();
 
-    Pair<ByteString, Long> makeCheckPoint(int squadId);
+    ByteString makeCheckPoint(int squadId);
 
-    void restoreFromCheckPoint(int squadId, long version, ByteString checkPoint);
+    void restoreFromCheckPoint(int squadId, long instanceId, ByteString checkPoint);
 
     Snapshot getSnapshot(int squad);
 }
