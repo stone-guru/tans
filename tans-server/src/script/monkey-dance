@@ -1,0 +1,38 @@
+#!/bin/bash
+KEY=${1:-"monkey.id"}
+SERVERS=("localhost:8081" "localhost:8082" "localhost:8083")
+
+sleep_seconds=1
+
+k=0
+url="http://${SERVERS[$k]}/acquire?key=$KEY"
+while [ true ]; do
+    # echo "----"
+    # curl -v -i "$url"
+    # echo "----"
+    # echo
+    
+    result=$(curl -s -i "$url")
+    #echo "result=$result"
+    err=$(echo "$result"|grep 'HTTP/1.1 5')
+    if [ -z "$result" ] || [ -n "$err" ]; then
+	let k=($k+1)%${#SERVERS[@]}
+	url="http://${SERVERS[$k]}/acquire?key=$KEY"
+	echo "Switch to another server $url"
+    else 
+	if echo "$result"|grep 'HTTP/1.1 200 OK' >> /dev/null; then
+	    s1=${url##'http://'}
+	    s2=${s1%%/*}
+	    r=$(echo "$result"|tail -n 1)
+	    echo $s2,$r
+	else
+	    loc=$(echo "$result"|/bin/grep 'location:')
+	    if [ -n "$loc" ]; then
+		url=${loc##'location: '}
+		url=${url%?}
+		echo "Redirect to another server $url"
+	    fi
+	fi
+    fi
+    sleep $sleep_seconds
+done    
