@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A Squad is a composition of Proposer and Acceptor, and works as a individual paxos server.
@@ -42,8 +43,8 @@ public class Squad implements EventDispatcher {
 
     private volatile Instance preLifeLastInstance;
 
-    private BlockingQueue<ProposeRequest> proposeRequestQueue = new LinkedBlockingQueue<>(10 * 1024);
-
+    private Deque<ProposeRequest> proposeRequestQueue = new ConcurrentLinkedDeque<>();
+    private AtomicInteger proposeRequestQueueSize = new AtomicInteger(0);
 
     public Squad(int squadId, JaxosSettings settings, Components components, StateMachine machine) {
         this.settings = settings;
@@ -53,7 +54,7 @@ public class Squad implements EventDispatcher {
         this.metrics = components.getJaxosMetrics().getOrCreateSquadMetrics(squadId);
         this.metrics.createLeaderGaugeIfNotSet(this.context::leaderId);
         this.metrics.createInstanceIdGaugeIfNotSet(this.context::chosenInstanceId);
-        this.metrics.createProposeQueueSizeIfNotSet(this.proposeRequestQueue::size);
+        this.metrics.createProposeQueueSizeIfNotSet(this.proposeRequestQueueSize::get);
 
         this.stateMachineRunner = new StateMachineRunner(squadId, machine);
         this.proposer = new Proposer(this.settings, components, this.context, (Learner) stateMachineRunner, this.metrics);
@@ -95,40 +96,49 @@ public class Squad implements EventDispatcher {
     public void propose(Event.BallotValue v, boolean ignoreLeader, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
         this.metrics.incProposeRequestCounter();
         ProposeRequest request = new ProposeRequest(v, ignoreLeader, resultFuture);
-        if (proposeRequestQueue.offer(request)) {
-            components.getWorkerPool().queueTask(this.context.squadId(), this::fireNextPropose);
+        if (proposeRequestQueueSize.get() >= 50 * 1024) {
+            resultFuture.completeExceptionally(new RuntimeException("Waiting Queue full"));
         }
         else {
-            resultFuture.completeExceptionally(new RuntimeException("Waiting Queue full"));
+            proposeRequestQueue.addLast(request);
+            proposeRequestQueueSize.incrementAndGet();
+
+            if (!proposer.isRunning()) {
+                this.fireNextPropose();
+            }
         }
     }
 
     private void fireNextPropose() {
-        while (!proposer.isRunning()) {
-            ProposeRequest request = proposeRequestQueue.poll();
-            if (request == null) {
-                break;
-            }
-            //client can cancel the propose request due to timeout or other reason.
-            if (request.resultFuture.isDone()) {
-                continue;
-            }
-            if (this.context.isOtherLeaderActive() && this.settings.leaderOnly() && !request.ignoreLeader) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("S{} redirect to {}", context.squadId(), this.context.lastProposer());
-                }
-                request.resultFuture.complete(ProposeResult.redirectTo(this.context.lastProposer()));
-            }
-            else {
-                boolean accepted = proposer.propose(this.context.chosenInstanceId() + 1, request.value, request.resultFuture);
-                //In fact, not accepted should not happen if no bug
-                //If so, it means another caller call this function out of the workpool.event process thread
-                if (!accepted) {
-                    proposeRequestQueue.offer(request);
+        components.getWorkerPool().queueTask(this.context.squadId(), () -> {
+            while (!proposer.isRunning()) {
+                ProposeRequest request = proposeRequestQueue.poll();
+                if (request == null) {
                     break;
                 }
+                proposeRequestQueueSize.decrementAndGet();
+
+                //client can cancel the propose request due to timeout or other reason.
+                if (request.resultFuture.isDone()) {
+                    continue;
+                }
+                if (this.context.isOtherLeaderActive() && this.settings.leaderOnly() && !request.ignoreLeader) {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("S{} redirect to {}", context.squadId(), this.context.lastProposer());
+                    }
+                    request.resultFuture.complete(ProposeResult.redirectTo(this.context.lastProposer()));
+                }
+                else {
+                    boolean accepted = proposer.propose(this.context.chosenInstanceId() + 1, request.value, request.resultFuture);
+                    //there is only one another place may cause propose not accepted is "directPropose" ,
+                    // which is for confirm the last instance after restart
+                    if (!accepted) {
+                        proposeRequestQueue.addFirst(request);
+                        proposeRequestQueueSize.incrementAndGet();
+                    }
+                }
             }
-        }
+        });
     }
 
     public void directPropose(long instanceId, Event.BallotValue value, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {

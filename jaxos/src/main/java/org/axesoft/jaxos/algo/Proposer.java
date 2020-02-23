@@ -79,13 +79,11 @@ public class Proposer {
 
 
     public boolean propose(long instanceId, Event.BallotValue value, CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture) {
-        synchronized (resultFutureRef) {
-            if (!resultFutureRef.compareAndSet(null, resultFuture)) {
-                String currentMsg = String.format("I%d %s", this.instanceId, this.proposeValue.toString());
-                String requestMsg = String.format("S%d I%d %s", context.squadId(), instanceId, value.toString());
-                logger.warn("S{} Previous propose not end ({}) for {}", context.squadId(), currentMsg, requestMsg);
-                return false;
-            }
+        if (!resultFutureRef.compareAndSet(null, resultFuture)) {
+            String currentMsg = String.format("I%d %s", this.instanceId, this.proposeValue.toString());
+            String requestMsg = String.format("S%d I%d %s", context.squadId(), instanceId, value.toString());
+            logger.warn("S{} Previous propose not end ({}) for {}", context.squadId(), currentMsg, requestMsg);
+            return false;
         }
 
         if (!config.getCommunicator().available()) {
@@ -114,9 +112,7 @@ public class Proposer {
 
 
     public boolean isRunning() {
-        synchronized (resultFutureRef) {
-            return resultFutureRef.get() != null;
-        }
+        return resultFutureRef.get() != null;
     }
 
     private void endAs(String error) {
@@ -151,7 +147,7 @@ public class Proposer {
         }
 
         if (proposeEndCallback != null) {
-            this.config.getWorkerPool().queueTask(this.context.squadId(), this.proposeEndCallback);
+            this.proposeEndCallback.run();
         }
     }
 

@@ -175,7 +175,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
                 "Invalid squadId(%s) while partition number is %s ", squadId, squads.length);
 
         CompletableFuture<ProposeResult<StateMachine.Snapshot>> resultFuture = new CompletableFuture<>();
-        this.eventWorkerPool.queueTask(squadId, () -> this.squads[squadId].propose(v, ignoreLeader, resultFuture));
+        this.squads[squadId].propose(v, ignoreLeader, resultFuture);
 
         return resultFuture;
     }

@@ -87,8 +87,8 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
     }
 
     private static Timer.Builder setGlobalTimerConfigs(Timer.Builder builder) {
-        return builder.publishPercentiles(0.5, 0.85, 0.99, 0.99)
-                .sla(Duration.ofMillis(3), Duration.ofMillis(10), Duration.ofMillis(50), Duration.ofMillis(100), Duration.ofSeconds(1))
+        return builder.publishPercentiles(0.5, 0.85, 0.99)
+                .sla(Duration.ofMillis(1), Duration.ofMillis(2), Duration.ofMillis(4), Duration.ofMillis(8), Duration.ofMillis(16))
                 .distributionStatisticExpiry(Duration.ofSeconds(5))
                 .distributionStatisticBufferLength(3);
     }
