@@ -1,30 +1,32 @@
 #!/bin/bash
 KEY=${1:-"monkey.id"}
 SERVERS=("localhost:8081" "localhost:8082" "localhost:8083")
+#SERVERS=("localhost:8088" "localhost:8088" "localhost:8088")
 
 sleep_seconds=1
-
+#jq  -j '"\(.key),\(.range[0]),\(.range[1]) \n"'
 k=0
-url="http://${SERVERS[$k]}/acquire?key=$KEY"
+url="http://${SERVERS[$k]}/v2/keys/$KEY"
 while [ true ]; do
     # echo "----"
     # curl -v -i "$url"
     # echo "----"
     # echo
     
-    result=$(curl -s -i "$url")
-    #echo "result=$result"
+    result=$(curl -XPUT -s -i "$url")
+    echo "result=$result"
     err=$(echo "$result"|grep 'HTTP/1.1 5')
     if [ -z "$result" ] || [ -n "$err" ]; then
 	let k=($k+1)%${#SERVERS[@]}
-	url="http://${SERVERS[$k]}/acquire?key=$KEY"
+	url="http://${SERVERS[$k]}/v2/keys/$KEY"
 	echo "Switch to another server $url"
     else 
 	if echo "$result"|grep 'HTTP/1.1 200 OK' >> /dev/null; then
 	    s1=${url##'http://'}
 	    s2=${s1%%/*}
-	    r=$(echo "$result"|tail -n 1)
-	    echo $s2,$r
+	    #r=$(echo "$result"|tail -n 1)
+            r=$(echo "$result"|tail -n 5|jq  -j '"\(.key),\(.range[0]),\(.range[1]) \n"')	    
+            echo $s2,$r
 	else
 	    loc=$(echo "$result"|/bin/grep 'location:')
 	    if [ -n "$loc" ]; then

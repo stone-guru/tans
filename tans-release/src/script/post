@@ -1,5 +1,5 @@
 #!/bin/bash
-SERVERS=("localhost:8081" "localhost:8082" "localhost:8083")
+SERVERS=("localhost:8081" "localhost:8082" "localhost:8083"  "localhost:8088")
 
 # $1 the serial number
 # $2 is the keyname
@@ -7,9 +7,9 @@ SERVERS=("localhost:8081" "localhost:8082" "localhost:8083")
 function detect_url(){
     let k=$1%${#SERVERS[@]}
     #echo "d=$1, k=$k" 1>&2
-    url="http://${SERVERS[$k]}/acquire?key=$2&n=${3:=1}"
+    url="http://${SERVERS[$k]}/v1/keys/$2?number=${3:=1}"
     echo $url 1>&2
-    result=$(curl -s -i $url)
+    result=$(curl -H "X-tans-token: 0BC9F3" -XPUT -s -i $url)
     if [ -z "$result" ]; then
 	#echo "nothing"
 	return 1
@@ -27,8 +27,8 @@ function detect_url(){
     fi    
 }
 
-REQ_COUNT=1000
-PAR_COUNT=7
+REQ_COUNT=10000
+PAR_COUNT=23
 sleep_seconds=7
 
 n=${1:-1000}
@@ -47,7 +47,7 @@ while [ true ]; do
 	let num=$i%5+1
 	url=$(detect_url $i "$army.$division.soldier$j.id" "$num")
 	if [ -n "$url" ]; then
-	    ab -q -S -n $REQ_COUNT -c $PAR_COUNT -k -l "$url"
+	    ab -q -S -n $REQ_COUNT -c $PAR_COUNT -k -l -m "PUT" -H "X-tans-token: 0BC9F3" "$url"
 	fi
 	let i=$i+1
 	#echo $i

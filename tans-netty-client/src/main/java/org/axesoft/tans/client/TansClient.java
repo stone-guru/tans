@@ -1,10 +1,12 @@
 package org.axesoft.tans.client;
 
-import io.netty.util.concurrent.Future;
 import org.apache.commons.lang3.Range;
+
+import java.util.concurrent.CompletableFuture;
 
 
 public interface TansClient {
-    Future<Range<Long>> acquire(String key, int n, boolean ignoreLeader);
+    Range<Long> acquire(String key, int n, boolean ignoreLeader);
+    double durationMillisPerRequest();
     void close();
 }

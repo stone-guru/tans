@@ -13,10 +13,7 @@ import org.pcollections.PMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -86,7 +83,7 @@ public class TansService implements StateMachine, HasMetrics {
     }
 
     public CompletableFuture<ProposeResult<List<LongRange>>> acquire(int squadId, List<KeyLong> requests, boolean ignoreLeader) {
-        if(requests.size() == 0){
+        if (requests.size() == 0) {
             return CompletableFuture.completedFuture(ProposeResult.success(ImmutableList.of()));
         }
 
@@ -98,6 +95,18 @@ public class TansService implements StateMachine, HasMetrics {
                     logger.error("at TansService.acquire", ex);
                     return ProposeResult.fail(ex.getClass().getName() + ": " + ex.getMessage());
                 });
+    }
+
+    /**
+     * Read the value from local state. This is not a consensus read
+     *
+     * @param key the key name
+     * @return value if key exist
+     */
+    public Optional<TansNumber> localValueOf(String key) {
+        checkNotNull(key);
+        int squadId = squadIdOf(key);
+        return Optional.ofNullable(this.numberMaps[squadId].numbers.get(key));
     }
 
     private List<LongRange> produceResult(TansNumberMapSnapShot snapShot, List<KeyLong> requests) {

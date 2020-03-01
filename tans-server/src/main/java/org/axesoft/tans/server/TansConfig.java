@@ -59,6 +59,7 @@ public class TansConfig {
     private String logHome;
     private int nettyWorkerThreadNumber = 5;
     private int nettyBossThreadNumber = 1;
+    private String httpToken = "0BC9F3";
 
     private TansConfig(){
 
@@ -108,6 +109,10 @@ public class TansConfig {
 
     public int nettyBossThreadNumber() {
         return nettyBossThreadNumber;
+    }
+
+    public String httpToken() {
+        return httpToken;
     }
 
     @Override

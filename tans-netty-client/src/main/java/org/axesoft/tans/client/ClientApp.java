@@ -3,7 +3,6 @@
  */
 package org.axesoft.tans.client;
 
-import io.netty.util.concurrent.Future;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.time.StopWatch;
@@ -14,21 +13,29 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class ClientApp {
 
-    public static class Args {
+    public static class Settings {
         private String servers = "localhost:8081;localhost:8082;localhost:8083";
         private int clientNumber = 1;
-        private int round = 1;
+        private int times = 1;
         private int printInterval = 100;
         private boolean ignoreLeader = false;
+        private String prefix = "entity-id";
+        private String token = "0BC9F3";
+        private int keyNumber = 1000;
+        private boolean forever=false;
     }
 
-    private static Args parseArgs(String[] params){
+    private static Settings parseArgs(String[] params) {
         Options options = new Options();
         options.addOption("s", "servers", true, "server addresses in syntax of 'addr1:port1;addr2:port2'");
         options.addOption("c", "client-number", true, "Num of parallel clients, default is 1");
-        options.addOption("k", "kilo", true, "How many kilo requests, default is 100");
+        options.addOption("t", "times", true, "How many requests, default is 100");
+        options.addOption("k", "key-number", true, "Number of keys");
         options.addOption("i", "ignore-leader", false, "Ignore the leader, default is false");
-        options.addOption("p", "print-interval", true,"Print result every given times, default 0 means never");
+        options.addOption("p", "print-interval", true, "Print result every given times, default 0 means never");
+        options.addOption("T", "token", true, "token for API access");
+        options.addOption("r", "key-prefix", true, "The prefix of require key");
+        options.addOption("f", "forever", false, "Let test run again and again");
 
         CommandLineParser parser = new DefaultParser();
         CommandLine line = null;
@@ -39,60 +46,64 @@ public class ClientApp {
             throw new RuntimeException(e);
         }
 
-        Args args = new Args();
-        if(line.hasOption('s')){
-            args.servers = line.getOptionValue('s');
+        Settings settings = new Settings();
+        if (line.hasOption('s')) {
+            settings.servers = line.getOptionValue('s');
         }
 
-        if(line.hasOption('c')){
-            args.clientNumber = Integer.parseInt(line.getOptionValue('c'));
+        if (line.hasOption('c')) {
+            settings.clientNumber = Integer.parseInt(line.getOptionValue('c'));
         }
 
-        if(line.hasOption('k')){
-            args.round = Integer.parseInt(line.getOptionValue('k'));
+        if (line.hasOption('t')) {
+            settings.times = Integer.parseInt(line.getOptionValue('t'));
         }
 
-        if(line.hasOption('i')){
-            args.ignoreLeader = true;
+        if (line.hasOption('k')) {
+            settings.keyNumber = Integer.parseInt(line.getOptionValue('k'));
         }
 
-        if(line.hasOption('p')){
-            args.printInterval = Integer.parseInt(line.getOptionValue('p'));
+        if (line.hasOption('i')) {
+            settings.ignoreLeader = true;
         }
 
-        return args;
+        if (line.hasOption('p')) {
+            settings.printInterval = Integer.parseInt(line.getOptionValue('p'));
+        }
+
+        if (line.hasOption('T')) {
+            settings.token = line.getOptionValue('T');
+        }
+
+        if (line.hasOption('r')) {
+            settings.prefix = line.getOptionValue('r');
+        }
+
+        if(line.hasOption('f')){
+            settings.forever = true;
+        }
+
+        return settings;
     }
-    public static void main(String[] args) throws Exception {
-        System.setProperty("node-id", "client");
 
-        Args arg = parseArgs(args);
-
-        int n = 1000;
-
-        int p = arg.clientNumber;
-
+    private static void run(Settings settings) throws Exception {
         final CountDownLatch startLatch = new CountDownLatch(1);
 
-        final CountDownLatch endLatch = new CountDownLatch(p);
+        final CountDownLatch endLatch = new CountDownLatch(settings.clientNumber);
 
         final AtomicLong millis = new AtomicLong(0);
         final AtomicLong times = new AtomicLong(0);
 
-        final ResultChecker checker = new ResultChecker((p * 3) / 2);
+        final ResultChecker checker = new ResultChecker((settings.clientNumber * 3) / 2);
 
-        for (int j = 0; j < p; j++) {
+        for (int j = 0; j < settings.clientNumber; j++) {
             new Thread(() -> {
                 try {
-                    new TansClientRunner()
-                            .setServers(arg.servers)
-                            .setK(arg.round)
-                            .setN(n)
-                            .setPrintInterval(arg.printInterval)
+                    new TansClientRunner(settings)
                             .setStartLatch(startLatch)
                             .setChecker(checker)
                             .setMillis(millis)
                             .setTimes(times)
-                            .setIgnoreLeader(arg.ignoreLeader)
                             .execute();
                 }
                 catch (Exception e) {
@@ -122,46 +133,42 @@ public class ClientApp {
 
         checker.printCheckResult();
     }
+    public static void main(String[] args) throws Exception {
+        System.setProperty("node-id", "client");
+
+        Settings settings = parseArgs(args);
+        do{
+            run(settings);
+        }while(settings.forever);
+    }
 
     public static class TansClientRunner {
-        private String servers;
-        private int k;
-        private int n;
-        private int printInterval;
-        private boolean ignoreLeader;
+        private Settings settings;
         private CountDownLatch startLatch;
         private ResultChecker checker;
         private AtomicLong millis;
         private AtomicLong times;
 
+        public TansClientRunner(Settings settings) {
+            this.settings = settings;
+        }
+
         public void execute() throws Exception {
-            TansClientBootstrap cb = new TansClientBootstrap(servers);
-            final TansClient client = cb.getClient();
-            final int interval = this.printInterval > 10 ? this.printInterval + (int) (Math.random() * 100) : this.printInterval;
+            //final TansClient client = new TansHttpClient(settings.servers.split(";"), settings.token);
+            final TansClient client = new TansApacheClient(settings.servers.split(";"), settings.token);
+            final int interval = settings.printInterval > 10 ? settings.printInterval + (int) (Math.random() * 100) : settings.printInterval;
 
             Thread.sleep(1000);
             startLatch.await();
 
             StopWatch watch = StopWatch.createStarted();
-            int count = 0;
             try {
-                for (int m = 0; m < k; m++) {
-                    for (int i = 0; i < n; i++) {
-                        count++;
-                        String key = "entity-id-" + (count % 2000);
-                        Future<Range<Long>> future = client.acquire(key, 1 + (i % 10), this.ignoreLeader);
-                        Range<Long> r = null;
-                        try {
-                            r = future.get(1, TimeUnit.SECONDS);
-                        }
-                        catch (TimeoutException e) {
-                            System.out.println("Timeout when for acquire " + key);
-                            return;
-                        }
-                        checker.accept(key, r.getMinimum(), r.getMaximum());
-                        if (interval != 0  && count % interval == 0) {
-                            System.out.println(String.format("[%s], %d, %s, %s", Thread.currentThread().getName(), count, key, r.toString()));
-                        }
+                for (int i = 0; i < settings.times; i++) {
+                    String key = settings.prefix + "-" + (i % settings.keyNumber);
+                    Range<Long> r = client.acquire(key, 1 + (i % 10), settings.ignoreLeader);
+                    checker.accept(key, r.getMinimum(), r.getMaximum());
+                    if (interval != 0 && i % interval == 0) {
+                        System.out.println(String.format("[%s], %d, %s, %s", Thread.currentThread().getName(), i, key, r.toString()));
                     }
                 }
             }
@@ -171,32 +178,14 @@ public class ClientApp {
                 double sec = m / 1000.0;
 
                 millis.addAndGet(m);
-                times.addAndGet(count);
-                cb.close();
+                times.addAndGet(settings.times);
 
-                System.out.println(String.format("%s finish %d in %.2f seconds, OPS is %.1f, DUR is %.1f ms",
-                        Thread.currentThread().getName(), count, sec, count / sec, ((double) m) / count));
+                System.out.println(String.format("%s finish %d in %.2f seconds, OPS is %.1f, DUR is %.1f ms, HTTP DUR is %.1f ms",
+                        Thread.currentThread().getName(), settings.times, sec, settings.times / sec, ((double) m) / settings.times,
+                        client.durationMillisPerRequest()));
+
+                client.close();
             }
-        }
-
-        public TansClientRunner setServers(String servers) {
-            this.servers = servers;
-            return this;
-        }
-
-        public TansClientRunner setK(int k) {
-            this.k = k;
-            return this;
-        }
-
-        public TansClientRunner setN(int n) {
-            this.n = n;
-            return this;
-        }
-
-        public TansClientRunner setPrintInterval(int printInterval) {
-            this.printInterval = printInterval;
-            return this;
         }
 
         public TansClientRunner setStartLatch(CountDownLatch startLatch) {
@@ -216,11 +205,6 @@ public class ClientApp {
 
         public TansClientRunner setTimes(AtomicLong times) {
             this.times = times;
-            return this;
-        }
-
-        public TansClientRunner setIgnoreLeader(boolean ignoreLeader) {
-            this.ignoreLeader = ignoreLeader;
             return this;
         }
     }

@@ -257,7 +257,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
                             catch (IllegalStateException e) {
 
                             }
-                            logger.info("The prelive last {} confirmed", i);
+                            logger.info("S{} The prelive last {} confirmed", i, i.squadId());
                             break;
                         default: {
                             if (rateLimiter.tryAcquireFor(squad.id())) {
@@ -502,12 +502,12 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         @Override
         public void stopping(State from) {
-            logger.info("{} is stopping", SERVICE_NAME);
+            logger.info("{} {} is stopping", SERVICE_NAME, settings.serverId());
         }
 
         @Override
         public void terminated(State from) {
-            logger.info("{} terminated from {}", SERVICE_NAME, from);
+            logger.info("{} {} terminated from {}", SERVICE_NAME, settings.serverId(), from);
         }
     }
 
