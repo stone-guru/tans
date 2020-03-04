@@ -2,6 +2,13 @@ package org.axesoft.tans.domain;
 
 import org.junit.Test;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -22,6 +29,10 @@ public class CounterTest {
 
     @Test
     public void testMask() throws Exception {
+
+        for(byte b : InetAddress.getLocalHost().getAddress()){
+            System.out.println(b);
+        }
 
         System.out.println(String.format("%x", 12638));
 

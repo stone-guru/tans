@@ -549,15 +549,15 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
     public static class MessageIdHolder {
 
         private static class Item {
-            private long highBits;
-            private AtomicInteger serialNum;
+            private final long highBits;
+            private final AtomicInteger serialNum;
 
             public Item(int highBits) {
                 this.highBits = ((long) highBits) << 32;
                 this.serialNum = new AtomicInteger(0);
             }
 
-            public synchronized long nextId() {
+            public long nextId() {
                 return this.highBits | (this.serialNum.getAndIncrement() & 0xffffffffL);
             }
         }

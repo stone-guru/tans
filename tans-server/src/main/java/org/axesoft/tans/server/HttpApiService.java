@@ -3,6 +3,7 @@ package org.axesoft.tans.server;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.RateLimiter;
@@ -26,7 +27,12 @@ import org.axesoft.jaxos.base.NumberedThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
@@ -52,10 +58,12 @@ public class HttpApiService extends AbstractExecutionThreadService {
 
     private TansAcquireRequestQueue[] acquireRequestQueues;
     private Timer queueTimer;
+    private SeqGenerator requestSequenceGenerator;
 
     private TansMetrics metrics;
 
     private Map<String, TansHttpRequestHandler> handlerMap;
+    private String hostHeader;
 
     private static class TansAcquireRequest {
         final KeyLong keyLong;
@@ -64,8 +72,8 @@ public class HttpApiService extends AbstractExecutionThreadService {
         final ChannelHandlerContext ctx;
         final long timestamp;
 
-        public TansAcquireRequest(String key, long v, boolean ignoreLeader, boolean keepAlive, ChannelHandlerContext ctx) {
-            this.keyLong = new KeyLong(key, v);
+        public TansAcquireRequest(long seq, String key, long v, boolean ignoreLeader, boolean keepAlive, ChannelHandlerContext ctx) {
+            this.keyLong = new KeyLong(key, v, seq);
             this.keepAlive = keepAlive;
             this.ignoreLeader = ignoreLeader;
             this.ctx = ctx;
@@ -88,13 +96,14 @@ public class HttpApiService extends AbstractExecutionThreadService {
         this.tansService = tansService;
         this.config = config;
         this.metrics = new TansMetrics(config.serverId(), this.config.jaxConfig().partitionNumber(), this.tansService::keyCountOf);
+        this.requestSequenceGenerator = new SeqGenerator(config.serverId());
 
         this.acquireRequestQueues = new TansAcquireRequestQueue[config.jaxConfig().partitionNumber()];
         for (int i = 0; i < acquireRequestQueues.length; i++) {
             this.acquireRequestQueues[i] = new TansAcquireRequestQueue(i, config.requestBatchSize());
         }
 
-        this.handlerMap = ImmutableMap.of( "v0", new TansHttpRequestHandlerV1(),"v1", new TansHttpRequestHandlerV2());
+        this.handlerMap = ImmutableMap.of( "v0", new TansHttpRequestHandlerV0(),"v1", new TansHttpRequestHandlerV1());
 
         super.addListener(new Listener() {
             @Override
@@ -117,6 +126,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 logger.error(String.format("%s failed %s due to exception", SERVICE_NAME, from), failure);
             }
         }, MoreExecutors.directExecutor());
+        this.hostHeader = config.address() + ":" + config.httpPort();
     }
 
     @Override
@@ -214,8 +224,8 @@ public class HttpApiService extends AbstractExecutionThreadService {
         if(!response.headers().contains(HttpHeaderNames.CONTENT_TYPE)){
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
         }
-        response.headers().set(HttpHeaderNames.HOST, config.address());
-        response.headers().set(HttpHeaderNames.FROM, Integer.toString(config.httpPort()));
+        response.headers().set(HttpHeaderNames.HOST, this.hostHeader);
+        response.headers().set(HttpHeaderNames.CACHE_CONTROL, "no-cache");
         response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
 
         if (keepAlive) {
@@ -326,7 +336,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
     }
 
-    private class TansHttpRequestHandlerV1 implements TansHttpRequestHandler {
+    private class TansHttpRequestHandlerV0 implements TansHttpRequestHandler {
 
         //The v0 service URL is http://<host>:<port>/v0/acquire?key=<keyname>[&n=<number>][&ignoreleader=true|false]
         private static final String ACQUIRE_PATH = "acquire";
@@ -420,7 +430,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 }
             }
 
-            return Either.right(new TansAcquireRequest(key, n, ignoreLeader, keepAlive, ctx));
+            return Either.right(new TansAcquireRequest(requestSequenceGenerator.next(), key, n, ignoreLeader, keepAlive, ctx));
         }
 
         @Override
@@ -438,9 +448,9 @@ public class HttpApiService extends AbstractExecutionThreadService {
             int httpPort = config.getPeerHttpPort(otherLeaderId);
             JaxosSettings.Peer peer = config.jaxConfig().getPeer(otherLeaderId);
             String url = String.format("http://v0/%s:%s%s?%s=%s&%s=%d",
-                    peer.address(), httpPort, TansHttpRequestHandlerV1.ACQUIRE_PATH,
-                    TansHttpRequestHandlerV1.KEY_ARG_NAME, request.keyLong.key(),
-                    TansHttpRequestHandlerV1.NUM_ARG_NAME, request.keyLong.value());
+                    peer.address(), httpPort, TansHttpRequestHandlerV0.ACQUIRE_PATH,
+                    TansHttpRequestHandlerV0.KEY_ARG_NAME, request.keyLong.key(),
+                    TansHttpRequestHandlerV0.NUM_ARG_NAME, request.keyLong.value());
 
             FullHttpResponse response = new DefaultFullHttpResponse(
                     HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT);
@@ -455,20 +465,20 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
     }
 
-    private class TansHttpRequestHandlerV2 implements TansHttpRequestHandler {
+    private class TansHttpRequestHandlerV1 implements TansHttpRequestHandler {
         //The v2 service URL is http://<host>:<port>/v2/keys/<keyname>[?number=<number>][&ignoreleader=true|false]
         //PUT for acquiring an id range, GET for read the key value at present
 
         private static final String KEYS_ROOT_PATH = "keys";
         private static final String NUMBER_ARG_NAME = "number";
-
+        private static final String SR_ARG_NAME = "seq";
 
         private final String NOT_FOUND_MESSAGE = "{\"message\":\"Not Found\"}\n";
         @Override
         public void process(String[] pathSegments, HttpRequest request, ChannelHandlerContext context) {
             String p1 = pathSegments.length > 0 ? pathSegments[0] : "";
             String p2 = pathSegments.length > 1 ? pathSegments[1] : "";
-
+            FullHttpResponse response = null;
             if (pathSegments.length == 2 && p1.equals(KEYS_ROOT_PATH)) {
                 if (request.method().name().equals("PUT")) {
                     Either<String, TansAcquireRequest> either = parseAcquireRequest(p2, request, context);
@@ -483,13 +493,15 @@ public class HttpApiService extends AbstractExecutionThreadService {
                     }
                 }
                 else if (request.method().name().equals("GET")) {
-                    if (processKeyRead(p2, HttpUtil.isKeepAlive(request), context)) {
-                        return;
-                    }
+                    response = processKeyRead(p2, HttpUtil.isKeepAlive(request), context);
+                } else {
+                    response = this.createJsonResponse(context, HttpResponseStatus.METHOD_NOT_ALLOWED);
                 }
             }
 
-            FullHttpResponse response = this.createJsonResponse(context, HttpResponseStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+            if(response == null) {
+                response = this.createJsonResponse(context, HttpResponseStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
+            }
             writeResponse(context, false, response);
         }
 
@@ -505,6 +517,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
                     "\"applied\": ", Long.toString(request.keyLong.value()), ",\n",
                     "\"range\":  [", Long.toString(result.low()), ",", Long.toString(result.high()), "]\n",
                     "}\n");
+            response.headers().add(HttpHeaderNames.LAST_MODIFIED, new Date(result.timestamp()).toString());
             return response;
         }
 
@@ -512,9 +525,9 @@ public class HttpApiService extends AbstractExecutionThreadService {
         public FullHttpResponse createAcquireResponseForRedirect(TansAcquireRequest request, int otherLeaderId) {
             int httpPort = config.getPeerHttpPort(otherLeaderId);
             JaxosSettings.Peer peer = config.jaxConfig().getPeer(otherLeaderId);
-            String url = String.format("http://%s:%s/v1/keys/%s?%s=%d",
+            String url = String.format("http://%s:%s/v1/keys/%s?%s=%d&%s=%d",
                     peer.address(), httpPort, request.keyLong.key(),
-                    TansHttpRequestHandlerV1.NUM_ARG_NAME, request.keyLong.value());
+                    NUMBER_ARG_NAME, request.keyLong.value(), SR_ARG_NAME, request.keyLong.stamp());
 
             FullHttpResponse response = this.createJsonResponse(request.ctx, HttpResponseStatus.TEMPORARY_REDIRECT);
             response.headers().set(HttpHeaderNames.LOCATION, url);
@@ -537,39 +550,32 @@ public class HttpApiService extends AbstractExecutionThreadService {
             }
 
             QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
-            Map<String, List<String>> params = queryStringDecoder.parameters();
-            long n = 1;
-            List<String> nx = params.get(NUMBER_ARG_NAME);
-            if (nx != null && nx.size() > 0) {
-                try {
-                    n = Long.parseLong(nx.get(0));
-                    if (n <= 0) {
-                        return Either.left("Zero or negative n '" + n + "'");
-                    }
-                }
-                catch (NumberFormatException e) {
-                    return Either.left("Invalid integer '" + nx.get(0) + "'");
-                }
+            Either<String, Long> n = getLongParam(queryStringDecoder.parameters(), NUMBER_ARG_NAME, 1, 1);
+            if(!n.isRight()){
+                return Either.castRight(n);
+            }
+            Either<String, Long> sr = getLongParam(queryStringDecoder.parameters(), SR_ARG_NAME, Long.MIN_VALUE,0);
+            if(!sr.isRight()) {
+                return Either.castRight(sr);
             }
 
-            return Either.right(new TansAcquireRequest(p2, n, false, HttpUtil.isKeepAlive(request), ctx));
+            long i = sr.getRight() == 0? requestSequenceGenerator.next() : sr.getRight();
+            return Either.right(new TansAcquireRequest(i, p2, n.getRight(), false, HttpUtil.isKeepAlive(request), ctx));
         }
 
-        private boolean processKeyRead(String keyName, boolean keepAlive, ChannelHandlerContext context) {
+        private FullHttpResponse processKeyRead(String keyName, boolean keepAlive, ChannelHandlerContext context) {
             Optional<TansNumber> opt = tansService.localValueOf(keyName);
             if (opt.isPresent()) {
                 TansNumber n = opt.get();
-                FullHttpResponse response = this.createJsonResponse(context, HttpResponseStatus.OK,
+                return this.createJsonResponse(context, HttpResponseStatus.OK,
                         "{\n",
                         "\"key\": ", "\"", n.name(), "\",\n",
                         "\"value\": ", Long.toString(n.value()), ",\n",
                         "\"version\":  ", Long.toString(n.version()), ",\n",
                         "\"lastModified\": \"", new Date(n.timestamp()).toString(), "\"\n",
                         "}\r\n");
-                writeResponse(context, keepAlive, response);
-                return true;
             }
-            return false;
+            return null;
         }
 
         private FullHttpResponse createJsonResponse(ChannelHandlerContext ctx, HttpResponseStatus status, String... vx) {
@@ -577,6 +583,23 @@ public class HttpApiService extends AbstractExecutionThreadService {
             r.headers().add(HttpHeaderNames.CONTENT_TYPE, "application/json; charset=UTF-8");
             return r;
         }
+    }
+
+    private static Either<String, Long> getLongParam(Map<String, List<String>> params, String paramName, long minValue, long deft){
+        long n = deft;
+        List<String> nx = params.get(paramName);
+        if (nx != null && nx.size() > 0) {
+            try {
+                n = Long.parseLong(nx.get(0));
+                if (n < minValue) {
+                    return Either.left("Zero or negative n '" + n + "'");
+                }
+            }
+            catch (NumberFormatException e) {
+                return Either.left("Invalid integer '" + nx.get(0) + "'");
+            }
+        }
+        return Either.right(n);
     }
 
     private class TansAcquireRequestQueue {
@@ -691,6 +714,51 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 writeResponse(request.ctx, request.keepAlive, response);
             }
         }
+    }
+
+    public static class SeqGenerator {
+
+            private long highBits;
+            private AtomicInteger serialNum;
+
+            public SeqGenerator(int serverId) {
+                if(serverId > 255 || serverId <= 0){
+                    throw new IllegalArgumentException("Seq generator does not support server id great than 255");
+                }
+                byte[] ip = getIpAddress();
+                long ipMask = Ints.fromByteArray(ip);
+                //this.highBits = (1L << 63) | (ipMask << 32) | (((long)serverId) << 24);
+                this.highBits = (ipMask << 32) | (((long)serverId) << 24);
+                this.serialNum = new AtomicInteger(0);
+            }
+
+            public long next() {
+                return this.highBits | (this.serialNum.getAndIncrement() & 0xfffffffL); //low 24 bits
+            }
+
+            private byte[] getIpAddress() {
+                try {
+                    Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+                    while (networkInterfaces.hasMoreElements()) {
+                        NetworkInterface networkInterface = networkInterfaces.nextElement();
+                        if(networkInterface.isLoopback()){
+                            continue;
+                        }
+                        Enumeration<InetAddress>  addresses = networkInterface.getInetAddresses();
+                        while (addresses.hasMoreElements()) {
+                            InetAddress addr = addresses.nextElement();
+                            if (addr instanceof Inet4Address) {
+                                return addr.getAddress();
+                            }
+                        }
+                    }
+                } catch (SocketException e) {
+                    throw new RuntimeException(e);
+                }
+
+                return new byte[]{127, 0, 0, 1};
+            }
+
     }
 }
 

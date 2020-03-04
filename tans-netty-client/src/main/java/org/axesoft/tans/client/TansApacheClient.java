@@ -160,7 +160,7 @@ public class TansApacheClient implements TansClient {
                     continue;
                 }
                 else {
-                    throw new RuntimeException("code " + statusCode);
+                    throw new RuntimeException("code " + statusCode + " when " + httpRequest.getURI());
                 }
             }
             catch (ClientProtocolException e) {

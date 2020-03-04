@@ -1,3 +1,5 @@
+// -*- compile-command: "protoc tans-message.proto --java_out=../java/" -*-
+
 syntax = "proto3";
 package  org.axesoft.tans.protobuff;
 
@@ -13,6 +15,7 @@ message ProtoTansNumber {
 message NumberProposal {
   string name = 1;
   int64  value = 2;
+  int64 sequence = 3;
 }
 
 message TansProposal {

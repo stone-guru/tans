@@ -28,6 +28,19 @@ public abstract class Either<A, B> {
         }
     }
 
+    public static <L, R1, R2> Either<L, R2> castRight(Either<L, R1> either) {
+        if(either.isRight()){
+            throw new ClassCastException();
+        }
+        return (Either<L, R2>)(either);
+    }
+
+    public static <L1, L2, R> Either<L2, R> castLeft(Either<L1, R> either) {
+        if(!either.isRight()){
+            throw new ClassCastException();
+        }
+        return (Either<L2, R>)(either);
+    }
 
     public abstract boolean isRight();
 

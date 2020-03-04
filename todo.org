@@ -43,7 +43,7 @@ are by netty
   - State "CANCELLED"  from "TODO"       [2020-01-08 Wed 16:07] \\
     use micrometer instead
 * DONE send checkpoint to learner if required logs were deleted					     :learner:
-* TODO Change HTTP response format from text to JSON 						 :application:
+* DONE Change HTTP response format from text to JSON						 :application:
 * DONE Add ignore leader parameter to HTTP request						 :application:
 * DONE Metrics support Promethus								     :metrics:
 * DONE When a node crashed, other node should be leader of its partition 				:algo:
@@ -59,12 +59,32 @@ are by netty
 * DONE the last saved instance should be confirmed again after restarting				:algo:
 * TODO Print version number in tans's splash message		                                        :base:
 * TODO Support deploy TANS in docker				                                  :deployment:
-* Implement another logger backend directly on file  
+* DONE Add full headers in TANS http response, last-modified etc				     :network:
+* TODO Many expired learn request is still running in teacher						:algo:
+  A server is very slow on loading intances for learning, that cause
+  the backend thread run in full CPU for a long time. Then, the
+  learner can not caught up others and send learn request again and
+  again. 
+
+  Analysed it and found that the root cause is slow rocksdb read on
+  this disk.
+
+* TODO The stop order of ServerManger is not good for HTTService and JaxosService		     :network:
+* TODO Test will use a ring index to store instance in rocksdb will reduce file size			 :log:
+* TODO There is a gap when server shutdown and switch leader sometimes 					:algo:
+  It's because that a request has been chosen but the HTTP response
+  has no chance to feed back. So, the client has to re-send the same
+  request and the processed one abandoned.
+
+  The solution maybe let client curry an uniqure request finger print
+  to indicate the request just as the ix in DB transaction.
+
+* TODO Implement another logger backend directly on file						 :log:
 * Issues
 ** TODO [#C] Netty print ERROR message [[file:caselog/netty-error.log][logs]]
-** TODO client hang when getting redirect to a not given server address 			      :client:
+** DONE client hang when getting redirect to a not given server address				      :client:
 ** DONE conflict propose cause some log dropped [[file:caselog/version-error.log][version error]] 						:algo:
-** TODO sometime, raised an exception of *Propose not end*, and most after save checkpoint [[file:caselog/propose-not-end.log][log]] 		:algo:
+** DONE sometime, raised an exception of *Propose not end*, and most after save checkpoint [[file:caselog/propose-not-end.log][log]]		:algo:
 ** DONE app's virt memory grow to more 20G , while res is several m only and Xmx is set to 1G		:base:
    It's issue of leveldbjni package and solved by change log lib to RocksDB
 
