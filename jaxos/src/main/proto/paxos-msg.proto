@@ -1,6 +1,6 @@
 // -*- compile-command: "protoc paxos-msg.proto --java_out=../java/" -*-
 
-syntax = "proto3";
+syntax = "proto2";
 package  org.axesoft.jaxos.network.protobuff;
 
 option java_outer_classname="PaxosMessage";
@@ -24,24 +24,24 @@ enum Code {
 }
 
 message DataGram {
-  Code code = 1;
-  int32 sender = 2;
-  int64 timestamp = 3;
-  bytes body = 4;
+  required Code code = 1;
+  required int32 sender = 2;
+  required int64 timestamp = 3;
+  required bytes body = 4;
 }
 
 message JoinReq {
-  bytes token = 1;
-  bytes hostname = 2;
-  int32 partitionNumber = 3;
-  bytes jaxosMessageVersion = 4;
-  bytes appMessageVersion = 5;
-  bytes destHostname = 6;
+  required bytes token = 1;
+  required bytes hostname = 2;
+  required int32 partitionNumber = 3;
+  required bytes jaxosMessageVersion = 4;
+  required bytes appMessageVersion = 5;
+  required bytes destHostname = 6;
 }
 
 message JoinRes {
-  int32 result = 1;
-  bytes msg = 2;
+  required int32 result = 1;
+  required bytes msg = 2;
 }
 
 enum ValueType {
@@ -51,90 +51,89 @@ enum ValueType {
 }
 
 message BallotValue {
-  int64 id = 1;
-  ValueType type = 2;
-  bytes content = 3;
+  required int64 id = 1;
+  required ValueType valueType = 2;
+  required bytes content = 3;
 }
 
 message ChosenInfo {
-  int64 instanceId = 1;
-  int64 ballotId = 2;
-  int64 elapsedMillis = 3;
+  required int64 instanceId = 1;
+  required int64 ballotId = 2;
+  required int64 elapsedMillis = 3;
 }
 
 message PrepareReq {
-  int32 squadId = 1;
-  int64 instanceId = 2;
-  int32 round = 3;
-  int32 proposal = 4;
-  ChosenInfo chosenInfo = 5;
+  required int32 squadId = 1;
+  required int64 instanceId = 2;
+  required int32 round = 3;
+  required int32 proposal = 4;
+  required ChosenInfo chosenInfo = 5;
 }
 
 message PrepareRes {
-  int32 squadId = 1;
-  int64 instanceId = 2;
-  int32 round = 3;
-  int32 result = 4;
-  int32 maxProposal = 5;
-  int32 acceptedProposal = 6;
-  BallotValue acceptedValue = 7;
-  ChosenInfo chosenInfo = 8;
+  required int32 squadId = 1;
+  required int64 instanceId = 2;
+  required int32 round = 3;
+  required int32 result = 4;
+  required int32 maxProposal = 5;
+  required int32 acceptedProposal = 6;
+  required BallotValue acceptedValue = 7;
+  required ChosenInfo chosenInfo = 8;
 }
 
 message AcceptReq {
-  int32 squadId = 1;
-  int64 instanceId = 2;
-  int32 round = 3;
-  int32 proposal = 4;
-  BallotValue value = 5;
-  ChosenInfo chosenInfo = 6;
+  required int32 squadId = 1;
+  required int64 instanceId = 2;
+  required int32 round = 3;
+  required int32 proposal = 4;
+  required BallotValue value = 5;
+  required ChosenInfo chosenInfo = 6;
 }
 
 message AcceptRes {
-  int32 squadId = 1;
-  int64 instanceId = 2;
-  int32 round = 3;
-  int32 result = 4;
-  int32 maxProposal = 5;
-  int64 acceptedBallotId = 6;
-  int64 chosenInstanceId = 7;
-  ChosenInfo chosenInfo = 8;
+  required int32 squadId = 1;
+  required int64 instanceId = 2;
+  required int32 round = 3;
+  required int32 result = 4;
+  required int32 maxProposal = 5;
+  required int64 acceptedBallotId = 6;
+  required ChosenInfo chosenInfo = 7;
 }
 
 message AcceptedNotify {
-  int32 squadId = 1;
-  int64 instanceId = 2;
-  int32 proposal = 3;
-  int64 ballotId = 4;
-}
-
+  required int32 squadId = 1;
+  required int64 instanceId = 2;
+  required int32 proposal = 3;
+  required int64 ballotId = 4;
+} 
+  
 message LearnReq {
-  int32 squadId = 1;
-  int64 lowInstanceId = 2;
+  required int32 squadId = 1;
+  required int64 lowInstanceId = 2;
 }
 
 message LearnRes {
-  int32 squadId = 1;
+  required int32 squadId = 1;
   repeated Instance instance = 2;
-  CheckPoint checkPoint = 3;
+  required CheckPoint checkPoint = 3;
 }
 
 message Instance {
-  int32 squadId = 1;
-  int64 instanceId = 2;
-  int32 proposal = 3;
-  BallotValue value = 4;
+  required int32 squadId = 1;
+  required int64 instanceId = 2;
+  required int32 proposal = 3;
+  required BallotValue value = 4;
 }
 
 message SquadChosen {
-  int32 squadId = 1;
-  int64 instanceId = 2;
+  required int32 squadId = 1;
+  required int64 instanceId = 2;
 }
 
 message CheckPoint {
-  int32 squadId = 1;
-  int64 timestamp = 2;
-  bytes content = 3;
-  Instance lastInstance = 4;
-}
-
+  required int32 squadId = 1;
+  required int64 timestamp = 2;
+  required bytes content = 3;
+  required Instance lastInstance = 4;
+} 
+  

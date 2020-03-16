@@ -14,32 +14,147 @@ public final class TansMessage {
     registerAllExtensions(
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
+  /**
+   * Protobuf enum {@code org.axesoft.tans.protobuff.ProposalType}
+   */
+  public enum ProposalType
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>ACQUIRE_NUMBER = 1;</code>
+     */
+    ACQUIRE_NUMBER(1),
+    /**
+     * <code>READ_NUBER_VALUE = 2;</code>
+     */
+    READ_NUBER_VALUE(2),
+    /**
+     * <code>ACQUIRE_CLIENT_ID = 3;</code>
+     */
+    ACQUIRE_CLIENT_ID(3),
+    ;
+
+    /**
+     * <code>ACQUIRE_NUMBER = 1;</code>
+     */
+    public static final int ACQUIRE_NUMBER_VALUE = 1;
+    /**
+     * <code>READ_NUBER_VALUE = 2;</code>
+     */
+    public static final int READ_NUBER_VALUE_VALUE = 2;
+    /**
+     * <code>ACQUIRE_CLIENT_ID = 3;</code>
+     */
+    public static final int ACQUIRE_CLIENT_ID_VALUE = 3;
+
+
+    public final int getNumber() {
+      return value;
+    }
+
+    /**
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @java.lang.Deprecated
+    public static ProposalType valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static ProposalType forNumber(int value) {
+      switch (value) {
+        case 1: return ACQUIRE_NUMBER;
+        case 2: return READ_NUBER_VALUE;
+        case 3: return ACQUIRE_CLIENT_ID;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<ProposalType>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static final com.google.protobuf.Internal.EnumLiteMap<
+        ProposalType> internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<ProposalType>() {
+            public ProposalType findValueByNumber(int number) {
+              return ProposalType.forNumber(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(ordinal());
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.axesoft.tans.protobuff.TansMessage.getDescriptor().getEnumTypes().get(0);
+    }
+
+    private static final ProposalType[] VALUES = values();
+
+    public static ProposalType valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int value;
+
+    private ProposalType(int value) {
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:org.axesoft.tans.protobuff.ProposalType)
+  }
+
   public interface ProtoTansNumberOrBuilder extends
       // @@protoc_insertion_point(interface_extends:org.axesoft.tans.protobuff.ProtoTansNumber)
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>optional string name = 1;</code>
+     * <code>required string name = 1;</code>
+     */
+    boolean hasName();
+    /**
+     * <code>required string name = 1;</code>
      */
     java.lang.String getName();
     /**
-     * <code>optional string name = 1;</code>
+     * <code>required string name = 1;</code>
      */
     com.google.protobuf.ByteString
         getNameBytes();
 
     /**
-     * <code>optional int64 value = 2;</code>
+     * <code>required int64 value = 2;</code>
+     */
+    boolean hasValue();
+    /**
+     * <code>required int64 value = 2;</code>
      */
     long getValue();
 
     /**
-     * <code>optional int64 version = 3;</code>
+     * <code>required int64 version = 3;</code>
+     */
+    boolean hasVersion();
+    /**
+     * <code>required int64 version = 3;</code>
      */
     long getVersion();
 
     /**
-     * <code>optional int64 timestamp = 4;</code>
+     * <code>required int64 timestamp = 4;</code>
+     */
+    boolean hasTimestamp();
+    /**
+     * <code>required int64 timestamp = 4;</code>
      */
     long getTimestamp();
   }
@@ -64,7 +179,7 @@ public final class TansMessage {
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
     getUnknownFields() {
-      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+      return this.unknownFields;
     }
     private ProtoTansNumber(
         com.google.protobuf.CodedInputStream input,
@@ -72,6 +187,8 @@ public final class TansMessage {
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
       int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -81,29 +198,30 @@ public final class TansMessage {
               done = true;
               break;
             default: {
-              if (!input.skipField(tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
             }
             case 10: {
-              java.lang.String s = input.readStringRequireUtf8();
-
-              name_ = s;
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              name_ = bs;
               break;
             }
             case 16: {
-
+              bitField0_ |= 0x00000002;
               value_ = input.readInt64();
               break;
             }
             case 24: {
-
+              bitField0_ |= 0x00000004;
               version_ = input.readInt64();
               break;
             }
             case 32: {
-
+              bitField0_ |= 0x00000008;
               timestamp_ = input.readInt64();
               break;
             }
@@ -115,6 +233,7 @@ public final class TansMessage {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
+        this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
@@ -130,10 +249,17 @@ public final class TansMessage {
               org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber.class, org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber.Builder.class);
     }
 
+    private int bitField0_;
     public static final int NAME_FIELD_NUMBER = 1;
     private volatile java.lang.Object name_;
     /**
-     * <code>optional string name = 1;</code>
+     * <code>required string name = 1;</code>
+     */
+    public boolean hasName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string name = 1;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -143,12 +269,14 @@ public final class TansMessage {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        name_ = s;
+        if (bs.isValidUtf8()) {
+          name_ = s;
+        }
         return s;
       }
     }
     /**
-     * <code>optional string name = 1;</code>
+     * <code>required string name = 1;</code>
      */
     public com.google.protobuf.ByteString
         getNameBytes() {
@@ -167,7 +295,13 @@ public final class TansMessage {
     public static final int VALUE_FIELD_NUMBER = 2;
     private long value_;
     /**
-     * <code>optional int64 value = 2;</code>
+     * <code>required int64 value = 2;</code>
+     */
+    public boolean hasValue() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required int64 value = 2;</code>
      */
     public long getValue() {
       return value_;
@@ -176,7 +310,13 @@ public final class TansMessage {
     public static final int VERSION_FIELD_NUMBER = 3;
     private long version_;
     /**
-     * <code>optional int64 version = 3;</code>
+     * <code>required int64 version = 3;</code>
+     */
+    public boolean hasVersion() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required int64 version = 3;</code>
      */
     public long getVersion() {
       return version_;
@@ -185,7 +325,13 @@ public final class TansMessage {
     public static final int TIMESTAMP_FIELD_NUMBER = 4;
     private long timestamp_;
     /**
-     * <code>optional int64 timestamp = 4;</code>
+     * <code>required int64 timestamp = 4;</code>
+     */
+    public boolean hasTimestamp() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required int64 timestamp = 4;</code>
      */
     public long getTimestamp() {
       return timestamp_;
@@ -197,24 +343,41 @@ public final class TansMessage {
       if (isInitialized == 1) return true;
       if (isInitialized == 0) return false;
 
+      if (!hasName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasValue()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasVersion()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasTimestamp()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
       memoizedIsInitialized = 1;
       return true;
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!getNameBytes().isEmpty()) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, name_);
       }
-      if (value_ != 0L) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeInt64(2, value_);
       }
-      if (version_ != 0L) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeInt64(3, version_);
       }
-      if (timestamp_ != 0L) {
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeInt64(4, timestamp_);
       }
+      unknownFields.writeTo(output);
     }
 
     public int getSerializedSize() {
@@ -222,21 +385,22 @@ public final class TansMessage {
       if (size != -1) return size;
 
       size = 0;
-      if (!getNameBytes().isEmpty()) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, name_);
       }
-      if (value_ != 0L) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(2, value_);
       }
-      if (version_ != 0L) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(3, version_);
       }
-      if (timestamp_ != 0L) {
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(4, timestamp_);
       }
+      size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -253,14 +417,27 @@ public final class TansMessage {
       org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber other = (org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber) obj;
 
       boolean result = true;
-      result = result && getName()
-          .equals(other.getName());
-      result = result && (getValue()
-          == other.getValue());
-      result = result && (getVersion()
-          == other.getVersion());
-      result = result && (getTimestamp()
-          == other.getTimestamp());
+      result = result && (hasName() == other.hasName());
+      if (hasName()) {
+        result = result && getName()
+            .equals(other.getName());
+      }
+      result = result && (hasValue() == other.hasValue());
+      if (hasValue()) {
+        result = result && (getValue()
+            == other.getValue());
+      }
+      result = result && (hasVersion() == other.hasVersion());
+      if (hasVersion()) {
+        result = result && (getVersion()
+            == other.getVersion());
+      }
+      result = result && (hasTimestamp() == other.hasTimestamp());
+      if (hasTimestamp()) {
+        result = result && (getTimestamp()
+            == other.getTimestamp());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
 
@@ -271,17 +448,25 @@ public final class TansMessage {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      hash = (37 * hash) + NAME_FIELD_NUMBER;
-      hash = (53 * hash) + getName().hashCode();
-      hash = (37 * hash) + VALUE_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getValue());
-      hash = (37 * hash) + VERSION_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getVersion());
-      hash = (37 * hash) + TIMESTAMP_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getTimestamp());
+      if (hasName()) {
+        hash = (37 * hash) + NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getName().hashCode();
+      }
+      if (hasValue()) {
+        hash = (37 * hash) + VALUE_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getValue());
+      }
+      if (hasVersion()) {
+        hash = (37 * hash) + VERSION_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getVersion());
+      }
+      if (hasTimestamp()) {
+        hash = (37 * hash) + TIMESTAMP_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getTimestamp());
+      }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -401,13 +586,13 @@ public final class TansMessage {
       public Builder clear() {
         super.clear();
         name_ = "";
-
+        bitField0_ = (bitField0_ & ~0x00000001);
         value_ = 0L;
-
+        bitField0_ = (bitField0_ & ~0x00000002);
         version_ = 0L;
-
+        bitField0_ = (bitField0_ & ~0x00000004);
         timestamp_ = 0L;
-
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -430,10 +615,25 @@ public final class TansMessage {
 
       public org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber buildPartial() {
         org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber result = new org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
         result.name_ = name_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
         result.value_ = value_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
         result.version_ = version_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
         result.timestamp_ = timestamp_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -475,24 +675,38 @@ public final class TansMessage {
 
       public Builder mergeFrom(org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber other) {
         if (other == org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber.getDefaultInstance()) return this;
-        if (!other.getName().isEmpty()) {
+        if (other.hasName()) {
+          bitField0_ |= 0x00000001;
           name_ = other.name_;
           onChanged();
         }
-        if (other.getValue() != 0L) {
+        if (other.hasValue()) {
           setValue(other.getValue());
         }
-        if (other.getVersion() != 0L) {
+        if (other.hasVersion()) {
           setVersion(other.getVersion());
         }
-        if (other.getTimestamp() != 0L) {
+        if (other.hasTimestamp()) {
           setTimestamp(other.getTimestamp());
         }
+        this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
       }
 
       public final boolean isInitialized() {
+        if (!hasName()) {
+          return false;
+        }
+        if (!hasValue()) {
+          return false;
+        }
+        if (!hasVersion()) {
+          return false;
+        }
+        if (!hasTimestamp()) {
+          return false;
+        }
         return true;
       }
 
@@ -513,10 +727,17 @@ public final class TansMessage {
         }
         return this;
       }
+      private int bitField0_;
 
       private java.lang.Object name_ = "";
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
+       */
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string name = 1;</code>
        */
       public java.lang.String getName() {
         java.lang.Object ref = name_;
@@ -524,14 +745,16 @@ public final class TansMessage {
           com.google.protobuf.ByteString bs =
               (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
-          name_ = s;
+          if (bs.isValidUtf8()) {
+            name_ = s;
+          }
           return s;
         } else {
           return (java.lang.String) ref;
         }
       }
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
        */
       public com.google.protobuf.ByteString
           getNameBytes() {
@@ -547,37 +770,36 @@ public final class TansMessage {
         }
       }
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
        */
       public Builder setName(
           java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  
+  bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
        */
       public Builder clearName() {
-        
+        bitField0_ = (bitField0_ & ~0x00000001);
         name_ = getDefaultInstance().getName();
         onChanged();
         return this;
       }
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
        */
       public Builder setNameBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  checkByteStringIsUtf8(value);
-        
+  bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
         return this;
@@ -585,25 +807,31 @@ public final class TansMessage {
 
       private long value_ ;
       /**
-       * <code>optional int64 value = 2;</code>
+       * <code>required int64 value = 2;</code>
+       */
+      public boolean hasValue() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required int64 value = 2;</code>
        */
       public long getValue() {
         return value_;
       }
       /**
-       * <code>optional int64 value = 2;</code>
+       * <code>required int64 value = 2;</code>
        */
       public Builder setValue(long value) {
-        
+        bitField0_ |= 0x00000002;
         value_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 value = 2;</code>
+       * <code>required int64 value = 2;</code>
        */
       public Builder clearValue() {
-        
+        bitField0_ = (bitField0_ & ~0x00000002);
         value_ = 0L;
         onChanged();
         return this;
@@ -611,25 +839,31 @@ public final class TansMessage {
 
       private long version_ ;
       /**
-       * <code>optional int64 version = 3;</code>
+       * <code>required int64 version = 3;</code>
+       */
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required int64 version = 3;</code>
        */
       public long getVersion() {
         return version_;
       }
       /**
-       * <code>optional int64 version = 3;</code>
+       * <code>required int64 version = 3;</code>
        */
       public Builder setVersion(long value) {
-        
+        bitField0_ |= 0x00000004;
         version_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 version = 3;</code>
+       * <code>required int64 version = 3;</code>
        */
       public Builder clearVersion() {
-        
+        bitField0_ = (bitField0_ & ~0x00000004);
         version_ = 0L;
         onChanged();
         return this;
@@ -637,37 +871,43 @@ public final class TansMessage {
 
       private long timestamp_ ;
       /**
-       * <code>optional int64 timestamp = 4;</code>
+       * <code>required int64 timestamp = 4;</code>
+       */
+      public boolean hasTimestamp() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required int64 timestamp = 4;</code>
        */
       public long getTimestamp() {
         return timestamp_;
       }
       /**
-       * <code>optional int64 timestamp = 4;</code>
+       * <code>required int64 timestamp = 4;</code>
        */
       public Builder setTimestamp(long value) {
-        
+        bitField0_ |= 0x00000008;
         timestamp_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 timestamp = 4;</code>
+       * <code>required int64 timestamp = 4;</code>
        */
       public Builder clearTimestamp() {
-        
+        bitField0_ = (bitField0_ & ~0x00000008);
         timestamp_ = 0L;
         onChanged();
         return this;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return this;
+        return super.setUnknownFields(unknownFields);
       }
 
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return this;
+        return super.mergeUnknownFields(unknownFields);
       }
 
 
@@ -684,7 +924,7 @@ public final class TansMessage {
       return DEFAULT_INSTANCE;
     }
 
-    private static final com.google.protobuf.Parser<ProtoTansNumber>
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<ProtoTansNumber>
         PARSER = new com.google.protobuf.AbstractParser<ProtoTansNumber>() {
       public ProtoTansNumber parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
@@ -714,22 +954,34 @@ public final class TansMessage {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>optional string name = 1;</code>
+     * <code>required string name = 1;</code>
+     */
+    boolean hasName();
+    /**
+     * <code>required string name = 1;</code>
      */
     java.lang.String getName();
     /**
-     * <code>optional string name = 1;</code>
+     * <code>required string name = 1;</code>
      */
     com.google.protobuf.ByteString
         getNameBytes();
 
     /**
-     * <code>optional int64 value = 2;</code>
+     * <code>required int64 value = 2;</code>
+     */
+    boolean hasValue();
+    /**
+     * <code>required int64 value = 2;</code>
      */
     long getValue();
 
     /**
-     * <code>optional int64 sequence = 3;</code>
+     * <code>required int64 sequence = 3;</code>
+     */
+    boolean hasSequence();
+    /**
+     * <code>required int64 sequence = 3;</code>
      */
     long getSequence();
   }
@@ -753,7 +1005,7 @@ public final class TansMessage {
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
     getUnknownFields() {
-      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+      return this.unknownFields;
     }
     private NumberProposal(
         com.google.protobuf.CodedInputStream input,
@@ -761,6 +1013,8 @@ public final class TansMessage {
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
       int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -770,24 +1024,25 @@ public final class TansMessage {
               done = true;
               break;
             default: {
-              if (!input.skipField(tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
             }
             case 10: {
-              java.lang.String s = input.readStringRequireUtf8();
-
-              name_ = s;
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              name_ = bs;
               break;
             }
             case 16: {
-
+              bitField0_ |= 0x00000002;
               value_ = input.readInt64();
               break;
             }
             case 24: {
-
+              bitField0_ |= 0x00000004;
               sequence_ = input.readInt64();
               break;
             }
@@ -799,6 +1054,7 @@ public final class TansMessage {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
+        this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
@@ -814,10 +1070,17 @@ public final class TansMessage {
               org.axesoft.tans.protobuff.TansMessage.NumberProposal.class, org.axesoft.tans.protobuff.TansMessage.NumberProposal.Builder.class);
     }
 
+    private int bitField0_;
     public static final int NAME_FIELD_NUMBER = 1;
     private volatile java.lang.Object name_;
     /**
-     * <code>optional string name = 1;</code>
+     * <code>required string name = 1;</code>
+     */
+    public boolean hasName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string name = 1;</code>
      */
     public java.lang.String getName() {
       java.lang.Object ref = name_;
@@ -827,12 +1090,14 @@ public final class TansMessage {
         com.google.protobuf.ByteString bs = 
             (com.google.protobuf.ByteString) ref;
         java.lang.String s = bs.toStringUtf8();
-        name_ = s;
+        if (bs.isValidUtf8()) {
+          name_ = s;
+        }
         return s;
       }
     }
     /**
-     * <code>optional string name = 1;</code>
+     * <code>required string name = 1;</code>
      */
     public com.google.protobuf.ByteString
         getNameBytes() {
@@ -851,7 +1116,13 @@ public final class TansMessage {
     public static final int VALUE_FIELD_NUMBER = 2;
     private long value_;
     /**
-     * <code>optional int64 value = 2;</code>
+     * <code>required int64 value = 2;</code>
+     */
+    public boolean hasValue() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required int64 value = 2;</code>
      */
     public long getValue() {
       return value_;
@@ -860,7 +1131,13 @@ public final class TansMessage {
     public static final int SEQUENCE_FIELD_NUMBER = 3;
     private long sequence_;
     /**
-     * <code>optional int64 sequence = 3;</code>
+     * <code>required int64 sequence = 3;</code>
+     */
+    public boolean hasSequence() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required int64 sequence = 3;</code>
      */
     public long getSequence() {
       return sequence_;
@@ -872,21 +1149,34 @@ public final class TansMessage {
       if (isInitialized == 1) return true;
       if (isInitialized == 0) return false;
 
+      if (!hasName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasValue()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasSequence()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
       memoizedIsInitialized = 1;
       return true;
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!getNameBytes().isEmpty()) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, name_);
       }
-      if (value_ != 0L) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeInt64(2, value_);
       }
-      if (sequence_ != 0L) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeInt64(3, sequence_);
       }
+      unknownFields.writeTo(output);
     }
 
     public int getSerializedSize() {
@@ -894,17 +1184,18 @@ public final class TansMessage {
       if (size != -1) return size;
 
       size = 0;
-      if (!getNameBytes().isEmpty()) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, name_);
       }
-      if (value_ != 0L) {
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(2, value_);
       }
-      if (sequence_ != 0L) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(3, sequence_);
       }
+      size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -921,12 +1212,22 @@ public final class TansMessage {
       org.axesoft.tans.protobuff.TansMessage.NumberProposal other = (org.axesoft.tans.protobuff.TansMessage.NumberProposal) obj;
 
       boolean result = true;
-      result = result && getName()
-          .equals(other.getName());
-      result = result && (getValue()
-          == other.getValue());
-      result = result && (getSequence()
-          == other.getSequence());
+      result = result && (hasName() == other.hasName());
+      if (hasName()) {
+        result = result && getName()
+            .equals(other.getName());
+      }
+      result = result && (hasValue() == other.hasValue());
+      if (hasValue()) {
+        result = result && (getValue()
+            == other.getValue());
+      }
+      result = result && (hasSequence() == other.hasSequence());
+      if (hasSequence()) {
+        result = result && (getSequence()
+            == other.getSequence());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
 
@@ -937,14 +1238,20 @@ public final class TansMessage {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      hash = (37 * hash) + NAME_FIELD_NUMBER;
-      hash = (53 * hash) + getName().hashCode();
-      hash = (37 * hash) + VALUE_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getValue());
-      hash = (37 * hash) + SEQUENCE_FIELD_NUMBER;
-      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getSequence());
+      if (hasName()) {
+        hash = (37 * hash) + NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getName().hashCode();
+      }
+      if (hasValue()) {
+        hash = (37 * hash) + VALUE_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getValue());
+      }
+      if (hasSequence()) {
+        hash = (37 * hash) + SEQUENCE_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getSequence());
+      }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -1064,11 +1371,11 @@ public final class TansMessage {
       public Builder clear() {
         super.clear();
         name_ = "";
-
+        bitField0_ = (bitField0_ & ~0x00000001);
         value_ = 0L;
-
+        bitField0_ = (bitField0_ & ~0x00000002);
         sequence_ = 0L;
-
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -1091,9 +1398,21 @@ public final class TansMessage {
 
       public org.axesoft.tans.protobuff.TansMessage.NumberProposal buildPartial() {
         org.axesoft.tans.protobuff.TansMessage.NumberProposal result = new org.axesoft.tans.protobuff.TansMessage.NumberProposal(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
         result.name_ = name_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
         result.value_ = value_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
         result.sequence_ = sequence_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -1135,21 +1454,32 @@ public final class TansMessage {
 
       public Builder mergeFrom(org.axesoft.tans.protobuff.TansMessage.NumberProposal other) {
         if (other == org.axesoft.tans.protobuff.TansMessage.NumberProposal.getDefaultInstance()) return this;
-        if (!other.getName().isEmpty()) {
+        if (other.hasName()) {
+          bitField0_ |= 0x00000001;
           name_ = other.name_;
           onChanged();
         }
-        if (other.getValue() != 0L) {
+        if (other.hasValue()) {
           setValue(other.getValue());
         }
-        if (other.getSequence() != 0L) {
+        if (other.hasSequence()) {
           setSequence(other.getSequence());
         }
+        this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
       }
 
       public final boolean isInitialized() {
+        if (!hasName()) {
+          return false;
+        }
+        if (!hasValue()) {
+          return false;
+        }
+        if (!hasSequence()) {
+          return false;
+        }
         return true;
       }
 
@@ -1170,10 +1500,17 @@ public final class TansMessage {
         }
         return this;
       }
+      private int bitField0_;
 
       private java.lang.Object name_ = "";
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
+       */
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string name = 1;</code>
        */
       public java.lang.String getName() {
         java.lang.Object ref = name_;
@@ -1181,14 +1518,16 @@ public final class TansMessage {
           com.google.protobuf.ByteString bs =
               (com.google.protobuf.ByteString) ref;
           java.lang.String s = bs.toStringUtf8();
-          name_ = s;
+          if (bs.isValidUtf8()) {
+            name_ = s;
+          }
           return s;
         } else {
           return (java.lang.String) ref;
         }
       }
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
        */
       public com.google.protobuf.ByteString
           getNameBytes() {
@@ -1204,37 +1543,36 @@ public final class TansMessage {
         }
       }
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
        */
       public Builder setName(
           java.lang.String value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  
+  bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
        */
       public Builder clearName() {
-        
+        bitField0_ = (bitField0_ & ~0x00000001);
         name_ = getDefaultInstance().getName();
         onChanged();
         return this;
       }
       /**
-       * <code>optional string name = 1;</code>
+       * <code>required string name = 1;</code>
        */
       public Builder setNameBytes(
           com.google.protobuf.ByteString value) {
         if (value == null) {
     throw new NullPointerException();
   }
-  checkByteStringIsUtf8(value);
-        
+  bitField0_ |= 0x00000001;
         name_ = value;
         onChanged();
         return this;
@@ -1242,25 +1580,31 @@ public final class TansMessage {
 
       private long value_ ;
       /**
-       * <code>optional int64 value = 2;</code>
+       * <code>required int64 value = 2;</code>
+       */
+      public boolean hasValue() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required int64 value = 2;</code>
        */
       public long getValue() {
         return value_;
       }
       /**
-       * <code>optional int64 value = 2;</code>
+       * <code>required int64 value = 2;</code>
        */
       public Builder setValue(long value) {
-        
+        bitField0_ |= 0x00000002;
         value_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 value = 2;</code>
+       * <code>required int64 value = 2;</code>
        */
       public Builder clearValue() {
-        
+        bitField0_ = (bitField0_ & ~0x00000002);
         value_ = 0L;
         onChanged();
         return this;
@@ -1268,37 +1612,43 @@ public final class TansMessage {
 
       private long sequence_ ;
       /**
-       * <code>optional int64 sequence = 3;</code>
+       * <code>required int64 sequence = 3;</code>
+       */
+      public boolean hasSequence() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required int64 sequence = 3;</code>
        */
       public long getSequence() {
         return sequence_;
       }
       /**
-       * <code>optional int64 sequence = 3;</code>
+       * <code>required int64 sequence = 3;</code>
        */
       public Builder setSequence(long value) {
-        
+        bitField0_ |= 0x00000004;
         sequence_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 sequence = 3;</code>
+       * <code>required int64 sequence = 3;</code>
        */
       public Builder clearSequence() {
-        
+        bitField0_ = (bitField0_ & ~0x00000004);
         sequence_ = 0L;
         onChanged();
         return this;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return this;
+        return super.setUnknownFields(unknownFields);
       }
 
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return this;
+        return super.mergeUnknownFields(unknownFields);
       }
 
 
@@ -1315,7 +1665,7 @@ public final class TansMessage {
       return DEFAULT_INSTANCE;
     }
 
-    private static final com.google.protobuf.Parser<NumberProposal>
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<NumberProposal>
         PARSER = new com.google.protobuf.AbstractParser<NumberProposal>() {
       public NumberProposal parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
@@ -1345,28 +1695,22 @@ public final class TansMessage {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     * <code>required .org.axesoft.tans.protobuff.ProposalType type = 1;</code>
      */
-    java.util.List<org.axesoft.tans.protobuff.TansMessage.NumberProposal> 
-        getProposalList();
+    boolean hasType();
     /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     * <code>required .org.axesoft.tans.protobuff.ProposalType type = 1;</code>
      */
-    org.axesoft.tans.protobuff.TansMessage.NumberProposal getProposal(int index);
+    org.axesoft.tans.protobuff.TansMessage.ProposalType getType();
+
     /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     * <code>required bytes content = 2;</code>
      */
-    int getProposalCount();
+    boolean hasContent();
     /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     * <code>required bytes content = 2;</code>
      */
-    java.util.List<? extends org.axesoft.tans.protobuff.TansMessage.NumberProposalOrBuilder> 
-        getProposalOrBuilderList();
-    /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
-     */
-    org.axesoft.tans.protobuff.TansMessage.NumberProposalOrBuilder getProposalOrBuilder(
-        int index);
+    com.google.protobuf.ByteString getContent();
   }
   /**
    * Protobuf type {@code org.axesoft.tans.protobuff.TansProposal}
@@ -1380,13 +1724,14 @@ public final class TansMessage {
       super(builder);
     }
     private TansProposal() {
-      proposal_ = java.util.Collections.emptyList();
+      type_ = 1;
+      content_ = com.google.protobuf.ByteString.EMPTY;
     }
 
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
     getUnknownFields() {
-      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+      return this.unknownFields;
     }
     private TansProposal(
         com.google.protobuf.CodedInputStream input,
@@ -1394,6 +1739,8 @@ public final class TansMessage {
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
       int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -1403,18 +1750,26 @@ public final class TansMessage {
               done = true;
               break;
             default: {
-              if (!input.skipField(tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
             }
-            case 10: {
-              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-                proposal_ = new java.util.ArrayList<org.axesoft.tans.protobuff.TansMessage.NumberProposal>();
-                mutable_bitField0_ |= 0x00000001;
+            case 8: {
+              int rawValue = input.readEnum();
+              org.axesoft.tans.protobuff.TansMessage.ProposalType value = org.axesoft.tans.protobuff.TansMessage.ProposalType.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                type_ = rawValue;
               }
-              proposal_.add(
-                  input.readMessage(org.axesoft.tans.protobuff.TansMessage.NumberProposal.parser(), extensionRegistry));
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              content_ = input.readBytes();
               break;
             }
           }
@@ -1425,9 +1780,7 @@ public final class TansMessage {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
       } finally {
-        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
-          proposal_ = java.util.Collections.unmodifiableList(proposal_);
-        }
+        this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
@@ -1443,39 +1796,36 @@ public final class TansMessage {
               org.axesoft.tans.protobuff.TansMessage.TansProposal.class, org.axesoft.tans.protobuff.TansMessage.TansProposal.Builder.class);
     }
 
-    public static final int PROPOSAL_FIELD_NUMBER = 1;
-    private java.util.List<org.axesoft.tans.protobuff.TansMessage.NumberProposal> proposal_;
+    private int bitField0_;
+    public static final int TYPE_FIELD_NUMBER = 1;
+    private int type_;
     /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     * <code>required .org.axesoft.tans.protobuff.ProposalType type = 1;</code>
      */
-    public java.util.List<org.axesoft.tans.protobuff.TansMessage.NumberProposal> getProposalList() {
-      return proposal_;
+    public boolean hasType() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     * <code>required .org.axesoft.tans.protobuff.ProposalType type = 1;</code>
      */
-    public java.util.List<? extends org.axesoft.tans.protobuff.TansMessage.NumberProposalOrBuilder> 
-        getProposalOrBuilderList() {
-      return proposal_;
+    public org.axesoft.tans.protobuff.TansMessage.ProposalType getType() {
+      org.axesoft.tans.protobuff.TansMessage.ProposalType result = org.axesoft.tans.protobuff.TansMessage.ProposalType.valueOf(type_);
+      return result == null ? org.axesoft.tans.protobuff.TansMessage.ProposalType.ACQUIRE_NUMBER : result;
+    }
+
+    public static final int CONTENT_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString content_;
+    /**
+     * <code>required bytes content = 2;</code>
+     */
+    public boolean hasContent() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     * <code>required bytes content = 2;</code>
      */
-    public int getProposalCount() {
-      return proposal_.size();
-    }
-    /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
-     */
-    public org.axesoft.tans.protobuff.TansMessage.NumberProposal getProposal(int index) {
-      return proposal_.get(index);
-    }
-    /**
-     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
-     */
-    public org.axesoft.tans.protobuff.TansMessage.NumberProposalOrBuilder getProposalOrBuilder(
-        int index) {
-      return proposal_.get(index);
+    public com.google.protobuf.ByteString getContent() {
+      return content_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -1484,15 +1834,27 @@ public final class TansMessage {
       if (isInitialized == 1) return true;
       if (isInitialized == 0) return false;
 
+      if (!hasType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasContent()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
       memoizedIsInitialized = 1;
       return true;
     }
 
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      for (int i = 0; i < proposal_.size(); i++) {
-        output.writeMessage(1, proposal_.get(i));
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeEnum(1, type_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, content_);
+      }
+      unknownFields.writeTo(output);
     }
 
     public int getSerializedSize() {
@@ -1500,10 +1862,15 @@ public final class TansMessage {
       if (size != -1) return size;
 
       size = 0;
-      for (int i = 0; i < proposal_.size(); i++) {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, proposal_.get(i));
+          .computeEnumSize(1, type_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, content_);
+      }
+      size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -1520,8 +1887,16 @@ public final class TansMessage {
       org.axesoft.tans.protobuff.TansMessage.TansProposal other = (org.axesoft.tans.protobuff.TansMessage.TansProposal) obj;
 
       boolean result = true;
-      result = result && getProposalList()
-          .equals(other.getProposalList());
+      result = result && (hasType() == other.hasType());
+      if (hasType()) {
+        result = result && type_ == other.type_;
+      }
+      result = result && (hasContent() == other.hasContent());
+      if (hasContent()) {
+        result = result && getContent()
+            .equals(other.getContent());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
 
@@ -1532,9 +1907,13 @@ public final class TansMessage {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (getProposalCount() > 0) {
-        hash = (37 * hash) + PROPOSAL_FIELD_NUMBER;
-        hash = (53 * hash) + getProposalList().hashCode();
+      if (hasType()) {
+        hash = (37 * hash) + TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + type_;
+      }
+      if (hasContent()) {
+        hash = (37 * hash) + CONTENT_FIELD_NUMBER;
+        hash = (53 * hash) + getContent().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -1650,17 +2029,14 @@ public final class TansMessage {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessageV3
                 .alwaysUseFieldBuilders) {
-          getProposalFieldBuilder();
         }
       }
       public Builder clear() {
         super.clear();
-        if (proposalBuilder_ == null) {
-          proposal_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000001);
-        } else {
-          proposalBuilder_.clear();
-        }
+        type_ = 1;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        content_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -1684,15 +2060,16 @@ public final class TansMessage {
       public org.axesoft.tans.protobuff.TansMessage.TansProposal buildPartial() {
         org.axesoft.tans.protobuff.TansMessage.TansProposal result = new org.axesoft.tans.protobuff.TansMessage.TansProposal(this);
         int from_bitField0_ = bitField0_;
-        if (proposalBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001)) {
-            proposal_ = java.util.Collections.unmodifiableList(proposal_);
-            bitField0_ = (bitField0_ & ~0x00000001);
-          }
-          result.proposal_ = proposal_;
-        } else {
-          result.proposal_ = proposalBuilder_.build();
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
         }
+        result.type_ = type_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.content_ = content_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -1734,6 +2111,572 @@ public final class TansMessage {
 
       public Builder mergeFrom(org.axesoft.tans.protobuff.TansMessage.TansProposal other) {
         if (other == org.axesoft.tans.protobuff.TansMessage.TansProposal.getDefaultInstance()) return this;
+        if (other.hasType()) {
+          setType(other.getType());
+        }
+        if (other.hasContent()) {
+          setContent(other.getContent());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasType()) {
+          return false;
+        }
+        if (!hasContent()) {
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.axesoft.tans.protobuff.TansMessage.TansProposal parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.axesoft.tans.protobuff.TansMessage.TansProposal) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private int type_ = 1;
+      /**
+       * <code>required .org.axesoft.tans.protobuff.ProposalType type = 1;</code>
+       */
+      public boolean hasType() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .org.axesoft.tans.protobuff.ProposalType type = 1;</code>
+       */
+      public org.axesoft.tans.protobuff.TansMessage.ProposalType getType() {
+        org.axesoft.tans.protobuff.TansMessage.ProposalType result = org.axesoft.tans.protobuff.TansMessage.ProposalType.valueOf(type_);
+        return result == null ? org.axesoft.tans.protobuff.TansMessage.ProposalType.ACQUIRE_NUMBER : result;
+      }
+      /**
+       * <code>required .org.axesoft.tans.protobuff.ProposalType type = 1;</code>
+       */
+      public Builder setType(org.axesoft.tans.protobuff.TansMessage.ProposalType value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
+        type_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required .org.axesoft.tans.protobuff.ProposalType type = 1;</code>
+       */
+      public Builder clearType() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        type_ = 1;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString content_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>required bytes content = 2;</code>
+       */
+      public boolean hasContent() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required bytes content = 2;</code>
+       */
+      public com.google.protobuf.ByteString getContent() {
+        return content_;
+      }
+      /**
+       * <code>required bytes content = 2;</code>
+       */
+      public Builder setContent(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        content_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bytes content = 2;</code>
+       */
+      public Builder clearContent() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        content_ = getDefaultInstance().getContent();
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:org.axesoft.tans.protobuff.TansProposal)
+    }
+
+    // @@protoc_insertion_point(class_scope:org.axesoft.tans.protobuff.TansProposal)
+    private static final org.axesoft.tans.protobuff.TansMessage.TansProposal DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.axesoft.tans.protobuff.TansMessage.TansProposal();
+    }
+
+    public static org.axesoft.tans.protobuff.TansMessage.TansProposal getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<TansProposal>
+        PARSER = new com.google.protobuf.AbstractParser<TansProposal>() {
+      public TansProposal parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new TansProposal(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<TansProposal> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<TansProposal> getParserForType() {
+      return PARSER;
+    }
+
+    public org.axesoft.tans.protobuff.TansMessage.TansProposal getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface AcquireNumberProposalOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:org.axesoft.tans.protobuff.AcquireNumberProposal)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    java.util.List<org.axesoft.tans.protobuff.TansMessage.NumberProposal> 
+        getProposalList();
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    org.axesoft.tans.protobuff.TansMessage.NumberProposal getProposal(int index);
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    int getProposalCount();
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    java.util.List<? extends org.axesoft.tans.protobuff.TansMessage.NumberProposalOrBuilder> 
+        getProposalOrBuilderList();
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    org.axesoft.tans.protobuff.TansMessage.NumberProposalOrBuilder getProposalOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code org.axesoft.tans.protobuff.AcquireNumberProposal}
+   */
+  public  static final class AcquireNumberProposal extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:org.axesoft.tans.protobuff.AcquireNumberProposal)
+      AcquireNumberProposalOrBuilder {
+    // Use AcquireNumberProposal.newBuilder() to construct.
+    private AcquireNumberProposal(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private AcquireNumberProposal() {
+      proposal_ = java.util.Collections.emptyList();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private AcquireNumberProposal(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                proposal_ = new java.util.ArrayList<org.axesoft.tans.protobuff.TansMessage.NumberProposal>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              proposal_.add(
+                  input.readMessage(org.axesoft.tans.protobuff.TansMessage.NumberProposal.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          proposal_ = java.util.Collections.unmodifiableList(proposal_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal.class, org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal.Builder.class);
+    }
+
+    public static final int PROPOSAL_FIELD_NUMBER = 1;
+    private java.util.List<org.axesoft.tans.protobuff.TansMessage.NumberProposal> proposal_;
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    public java.util.List<org.axesoft.tans.protobuff.TansMessage.NumberProposal> getProposalList() {
+      return proposal_;
+    }
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    public java.util.List<? extends org.axesoft.tans.protobuff.TansMessage.NumberProposalOrBuilder> 
+        getProposalOrBuilderList() {
+      return proposal_;
+    }
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    public int getProposalCount() {
+      return proposal_.size();
+    }
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    public org.axesoft.tans.protobuff.TansMessage.NumberProposal getProposal(int index) {
+      return proposal_.get(index);
+    }
+    /**
+     * <code>repeated .org.axesoft.tans.protobuff.NumberProposal proposal = 1;</code>
+     */
+    public org.axesoft.tans.protobuff.TansMessage.NumberProposalOrBuilder getProposalOrBuilder(
+        int index) {
+      return proposal_.get(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      for (int i = 0; i < getProposalCount(); i++) {
+        if (!getProposal(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      for (int i = 0; i < proposal_.size(); i++) {
+        output.writeMessage(1, proposal_.get(i));
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      for (int i = 0; i < proposal_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, proposal_.get(i));
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal)) {
+        return super.equals(obj);
+      }
+      org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal other = (org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal) obj;
+
+      boolean result = true;
+      result = result && getProposalList()
+          .equals(other.getProposalList());
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (getProposalCount() > 0) {
+        hash = (37 * hash) + PROPOSAL_FIELD_NUMBER;
+        hash = (53 * hash) + getProposalList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code org.axesoft.tans.protobuff.AcquireNumberProposal}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:org.axesoft.tans.protobuff.AcquireNumberProposal)
+        org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposalOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal.class, org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal.Builder.class);
+      }
+
+      // Construct using org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getProposalFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (proposalBuilder_ == null) {
+          proposal_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+        } else {
+          proposalBuilder_.clear();
+        }
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_descriptor;
+      }
+
+      public org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal getDefaultInstanceForType() {
+        return org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal.getDefaultInstance();
+      }
+
+      public org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal build() {
+        org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal buildPartial() {
+        org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal result = new org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal(this);
+        int from_bitField0_ = bitField0_;
+        if (proposalBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            proposal_ = java.util.Collections.unmodifiableList(proposal_);
+            bitField0_ = (bitField0_ & ~0x00000001);
+          }
+          result.proposal_ = proposal_;
+        } else {
+          result.proposal_ = proposalBuilder_.build();
+        }
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal) {
+          return mergeFrom((org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal other) {
+        if (other == org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal.getDefaultInstance()) return this;
         if (proposalBuilder_ == null) {
           if (!other.proposal_.isEmpty()) {
             if (proposal_.isEmpty()) {
@@ -1760,11 +2703,17 @@ public final class TansMessage {
             }
           }
         }
+        this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
       }
 
       public final boolean isInitialized() {
+        for (int i = 0; i < getProposalCount(); i++) {
+          if (!getProposal(i).isInitialized()) {
+            return false;
+          }
+        }
         return true;
       }
 
@@ -1772,11 +2721,11 @@ public final class TansMessage {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.axesoft.tans.protobuff.TansMessage.TansProposal parsedMessage = null;
+        org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.axesoft.tans.protobuff.TansMessage.TansProposal) e.getUnfinishedMessage();
+          parsedMessage = (org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
           if (parsedMessage != null) {
@@ -2028,48 +2977,599 @@ public final class TansMessage {
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return this;
+        return super.setUnknownFields(unknownFields);
       }
 
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return this;
+        return super.mergeUnknownFields(unknownFields);
       }
 
 
-      // @@protoc_insertion_point(builder_scope:org.axesoft.tans.protobuff.TansProposal)
+      // @@protoc_insertion_point(builder_scope:org.axesoft.tans.protobuff.AcquireNumberProposal)
     }
 
-    // @@protoc_insertion_point(class_scope:org.axesoft.tans.protobuff.TansProposal)
-    private static final org.axesoft.tans.protobuff.TansMessage.TansProposal DEFAULT_INSTANCE;
+    // @@protoc_insertion_point(class_scope:org.axesoft.tans.protobuff.AcquireNumberProposal)
+    private static final org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal DEFAULT_INSTANCE;
     static {
-      DEFAULT_INSTANCE = new org.axesoft.tans.protobuff.TansMessage.TansProposal();
+      DEFAULT_INSTANCE = new org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal();
     }
 
-    public static org.axesoft.tans.protobuff.TansMessage.TansProposal getDefaultInstance() {
+    public static org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal getDefaultInstance() {
       return DEFAULT_INSTANCE;
     }
 
-    private static final com.google.protobuf.Parser<TansProposal>
-        PARSER = new com.google.protobuf.AbstractParser<TansProposal>() {
-      public TansProposal parsePartialFrom(
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<AcquireNumberProposal>
+        PARSER = new com.google.protobuf.AbstractParser<AcquireNumberProposal>() {
+      public AcquireNumberProposal parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-          return new TansProposal(input, extensionRegistry);
+          return new AcquireNumberProposal(input, extensionRegistry);
       }
     };
 
-    public static com.google.protobuf.Parser<TansProposal> parser() {
+    public static com.google.protobuf.Parser<AcquireNumberProposal> parser() {
       return PARSER;
     }
 
     @java.lang.Override
-    public com.google.protobuf.Parser<TansProposal> getParserForType() {
+    public com.google.protobuf.Parser<AcquireNumberProposal> getParserForType() {
       return PARSER;
     }
 
-    public org.axesoft.tans.protobuff.TansMessage.TansProposal getDefaultInstanceForType() {
+    public org.axesoft.tans.protobuff.TansMessage.AcquireNumberProposal getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ReadNumberValueProposalOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:org.axesoft.tans.protobuff.ReadNumberValueProposal)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required string key = 1;</code>
+     */
+    boolean hasKey();
+    /**
+     * <code>required string key = 1;</code>
+     */
+    java.lang.String getKey();
+    /**
+     * <code>required string key = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getKeyBytes();
+  }
+  /**
+   * Protobuf type {@code org.axesoft.tans.protobuff.ReadNumberValueProposal}
+   */
+  public  static final class ReadNumberValueProposal extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:org.axesoft.tans.protobuff.ReadNumberValueProposal)
+      ReadNumberValueProposalOrBuilder {
+    // Use ReadNumberValueProposal.newBuilder() to construct.
+    private ReadNumberValueProposal(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ReadNumberValueProposal() {
+      key_ = "";
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ReadNumberValueProposal(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00000001;
+              key_ = bs;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal.class, org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int KEY_FIELD_NUMBER = 1;
+    private volatile java.lang.Object key_;
+    /**
+     * <code>required string key = 1;</code>
+     */
+    public boolean hasKey() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string key = 1;</code>
+     */
+    public java.lang.String getKey() {
+      java.lang.Object ref = key_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          key_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string key = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getKeyBytes() {
+      java.lang.Object ref = key_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        key_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasKey()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, key_);
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, key_);
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal)) {
+        return super.equals(obj);
+      }
+      org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal other = (org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal) obj;
+
+      boolean result = true;
+      result = result && (hasKey() == other.hasKey());
+      if (hasKey()) {
+        result = result && getKey()
+            .equals(other.getKey());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasKey()) {
+        hash = (37 * hash) + KEY_FIELD_NUMBER;
+        hash = (53 * hash) + getKey().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code org.axesoft.tans.protobuff.ReadNumberValueProposal}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:org.axesoft.tans.protobuff.ReadNumberValueProposal)
+        org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposalOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal.class, org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal.Builder.class);
+      }
+
+      // Construct using org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        key_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.axesoft.tans.protobuff.TansMessage.internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_descriptor;
+      }
+
+      public org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal getDefaultInstanceForType() {
+        return org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal.getDefaultInstance();
+      }
+
+      public org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal build() {
+        org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal buildPartial() {
+        org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal result = new org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.key_ = key_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal) {
+          return mergeFrom((org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal other) {
+        if (other == org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal.getDefaultInstance()) return this;
+        if (other.hasKey()) {
+          bitField0_ |= 0x00000001;
+          key_ = other.key_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasKey()) {
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object key_ = "";
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public boolean hasKey() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public java.lang.String getKey() {
+        java.lang.Object ref = key_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            key_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getKeyBytes() {
+        java.lang.Object ref = key_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          key_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public Builder setKey(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        key_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public Builder clearKey() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        key_ = getDefaultInstance().getKey();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string key = 1;</code>
+       */
+      public Builder setKeyBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        key_ = value;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:org.axesoft.tans.protobuff.ReadNumberValueProposal)
+    }
+
+    // @@protoc_insertion_point(class_scope:org.axesoft.tans.protobuff.ReadNumberValueProposal)
+    private static final org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal();
+    }
+
+    public static org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<ReadNumberValueProposal>
+        PARSER = new com.google.protobuf.AbstractParser<ReadNumberValueProposal>() {
+      public ReadNumberValueProposal parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new ReadNumberValueProposal(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<ReadNumberValueProposal> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ReadNumberValueProposal> getParserForType() {
+      return PARSER;
+    }
+
+    public org.axesoft.tans.protobuff.TansMessage.ReadNumberValueProposal getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -2121,7 +3621,7 @@ public final class TansMessage {
     @java.lang.Override
     public final com.google.protobuf.UnknownFieldSet
     getUnknownFields() {
-      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+      return this.unknownFields;
     }
     private TansCheckPoint(
         com.google.protobuf.CodedInputStream input,
@@ -2129,6 +3629,8 @@ public final class TansMessage {
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
       int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
         boolean done = false;
         while (!done) {
@@ -2138,7 +3640,8 @@ public final class TansMessage {
               done = true;
               break;
             default: {
-              if (!input.skipField(tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -2149,7 +3652,7 @@ public final class TansMessage {
                 mutable_bitField0_ |= 0x00000001;
               }
               number_.add(
-                  input.readMessage(org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber.parser(), extensionRegistry));
+                  input.readMessage(org.axesoft.tans.protobuff.TansMessage.ProtoTansNumber.PARSER, extensionRegistry));
               break;
             }
           }
@@ -2163,6 +3666,7 @@ public final class TansMessage {
         if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
           number_ = java.util.Collections.unmodifiableList(number_);
         }
+        this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
@@ -2219,6 +3723,12 @@ public final class TansMessage {
       if (isInitialized == 1) return true;
       if (isInitialized == 0) return false;
 
+      for (int i = 0; i < getNumberCount(); i++) {
+        if (!getNumber(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -2228,6 +3738,7 @@ public final class TansMessage {
       for (int i = 0; i < number_.size(); i++) {
         output.writeMessage(4, number_.get(i));
       }
+      unknownFields.writeTo(output);
     }
 
     public int getSerializedSize() {
@@ -2239,6 +3750,7 @@ public final class TansMessage {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(4, number_.get(i));
       }
+      size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -2257,6 +3769,7 @@ public final class TansMessage {
       boolean result = true;
       result = result && getNumberList()
           .equals(other.getNumberList());
+      result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
 
@@ -2495,11 +4008,17 @@ public final class TansMessage {
             }
           }
         }
+        this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
       }
 
       public final boolean isInitialized() {
+        for (int i = 0; i < getNumberCount(); i++) {
+          if (!getNumber(i).isInitialized()) {
+            return false;
+          }
+        }
         return true;
       }
 
@@ -2763,12 +4282,12 @@ public final class TansMessage {
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return this;
+        return super.setUnknownFields(unknownFields);
       }
 
       public final Builder mergeUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
-        return this;
+        return super.mergeUnknownFields(unknownFields);
       }
 
 
@@ -2785,7 +4304,7 @@ public final class TansMessage {
       return DEFAULT_INSTANCE;
     }
 
-    private static final com.google.protobuf.Parser<TansCheckPoint>
+    @java.lang.Deprecated public static final com.google.protobuf.Parser<TansCheckPoint>
         PARSER = new com.google.protobuf.AbstractParser<TansCheckPoint>() {
       public TansCheckPoint parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
@@ -2826,6 +4345,16 @@ public final class TansMessage {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_org_axesoft_tans_protobuff_TansProposal_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_org_axesoft_tans_protobuff_TansCheckPoint_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -2840,15 +4369,20 @@ public final class TansMessage {
   static {
     java.lang.String[] descriptorData = {
       "\n\022tans-message.proto\022\032org.axesoft.tans.p" +
-      "rotobuff\"R\n\017ProtoTansNumber\022\014\n\004name\030\001 \001(" +
-      "\t\022\r\n\005value\030\002 \001(\003\022\017\n\007version\030\003 \001(\003\022\021\n\ttim" +
-      "estamp\030\004 \001(\003\"?\n\016NumberProposal\022\014\n\004name\030\001" +
-      " \001(\t\022\r\n\005value\030\002 \001(\003\022\020\n\010sequence\030\003 \001(\003\"L\n" +
-      "\014TansProposal\022<\n\010proposal\030\001 \003(\0132*.org.ax" +
-      "esoft.tans.protobuff.NumberProposal\"M\n\016T" +
-      "ansCheckPoint\022;\n\006number\030\004 \003(\0132+.org.axes" +
-      "oft.tans.protobuff.ProtoTansNumberB\rB\013Ta" +
-      "nsMessageb\006proto3"
+      "rotobuff\"R\n\017ProtoTansNumber\022\014\n\004name\030\001 \002(" +
+      "\t\022\r\n\005value\030\002 \002(\003\022\017\n\007version\030\003 \002(\003\022\021\n\ttim" +
+      "estamp\030\004 \002(\003\"?\n\016NumberProposal\022\014\n\004name\030\001" +
+      " \002(\t\022\r\n\005value\030\002 \002(\003\022\020\n\010sequence\030\003 \002(\003\"W\n" +
+      "\014TansProposal\0226\n\004type\030\001 \002(\0162(.org.axesof" +
+      "t.tans.protobuff.ProposalType\022\017\n\007content" +
+      "\030\002 \002(\014\"U\n\025AcquireNumberProposal\022<\n\010propo" +
+      "sal\030\001 \003(\0132*.org.axesoft.tans.protobuff.N" +
+      "umberProposal\"&\n\027ReadNumberValueProposal",
+      "\022\013\n\003key\030\001 \002(\t\"M\n\016TansCheckPoint\022;\n\006numbe" +
+      "r\030\004 \003(\0132+.org.axesoft.tans.protobuff.Pro" +
+      "toTansNumber*O\n\014ProposalType\022\022\n\016ACQUIRE_" +
+      "NUMBER\020\001\022\024\n\020READ_NUBER_VALUE\020\002\022\025\n\021ACQUIR" +
+      "E_CLIENT_ID\020\003B\rB\013TansMessage"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -2879,9 +4413,21 @@ public final class TansMessage {
     internal_static_org_axesoft_tans_protobuff_TansProposal_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_org_axesoft_tans_protobuff_TansProposal_descriptor,
-        new java.lang.String[] { "Proposal", });
-    internal_static_org_axesoft_tans_protobuff_TansCheckPoint_descriptor =
+        new java.lang.String[] { "Type", "Content", });
+    internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_descriptor =
       getDescriptor().getMessageTypes().get(3);
+    internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_org_axesoft_tans_protobuff_AcquireNumberProposal_descriptor,
+        new java.lang.String[] { "Proposal", });
+    internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_descriptor =
+      getDescriptor().getMessageTypes().get(4);
+    internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_org_axesoft_tans_protobuff_ReadNumberValueProposal_descriptor,
+        new java.lang.String[] { "Key", });
+    internal_static_org_axesoft_tans_protobuff_TansCheckPoint_descriptor =
+      getDescriptor().getMessageTypes().get(5);
     internal_static_org_axesoft_tans_protobuff_TansCheckPoint_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_org_axesoft_tans_protobuff_TansCheckPoint_descriptor,

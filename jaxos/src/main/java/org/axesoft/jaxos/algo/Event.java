@@ -293,6 +293,11 @@ public abstract class Event {
                     ", elapsedMillis=" + elapsedMillis +
                     '}';
         }
+
+        public ChosenInfo setElapsedMillis(long elapsedMillis) {
+            this.elapsedMillis = elapsedMillis;
+            return this;
+        }
     }
 
     public static class PrepareRequest extends BallotEvent {

@@ -10,7 +10,8 @@ import http.client, urllib.parse
 import socket
 import json
 
-servers = [('localhost', 8081), ('localhost', 8082), ('localhost', 8083)]
+servers = [('localhost', 8081), ('localhost', 8082)]
+#servers = [('localhost', 8081), ('localhost', 8082), ('localhost', 8083)]
 printInterval=321
 
 def make_url(key,n, seq):
@@ -193,7 +194,7 @@ class RangeCombinator(object):
     
 def main():
     threads=[]
-    n=15
+    n=5
     combinator=RangeCombinator()
     latch=CountDownLatch(n)
     for i in range(n):

@@ -8,12 +8,15 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.commons.lang3.Range;
+import org.apache.http.HttpClientConnection;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
 
 import java.io.IOException;
@@ -21,6 +24,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -88,8 +92,8 @@ public class TansApacheClient implements TansClient {
         this.token = token;
 
         PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-        cm.setMaxTotal(10);
-        cm.setDefaultMaxPerRoute(3);
+        cm.setMaxTotal(5);
+        cm.setDefaultMaxPerRoute(1);
 
         this.client = HttpClients.custom()
                 .setConnectionManager(cm)
@@ -153,7 +157,7 @@ public class TansApacheClient implements TansClient {
                     return parseResult(conent);
                 }
                 else if (isRedirectCode(response.getStatusLine().getStatusCode())) {
-                    String url = response.getFirstHeader("location").getValue();
+                    String url = removeRequestSequence(response.getFirstHeader("location").getValue());
                     this.requestCache.put(acquireRequest, buildRequest(url));
                 }
                 else if (statusCode == 409 || statusCode == 503) { //conflict || unavailabled
@@ -181,6 +185,14 @@ public class TansApacheClient implements TansClient {
         int times = this.requestTimes.get();
         double duration = this.totalRequestDuration.get();
         return times == 0? 0.0 : duration/times;
+    }
+
+    private String removeRequestSequence(String url){
+        int idx = url.indexOf("&srn=");
+        if(idx > 0){
+            return url.substring(0, idx);
+        }
+        return url;
     }
 
     private Range<Long> parseResult(String content) {

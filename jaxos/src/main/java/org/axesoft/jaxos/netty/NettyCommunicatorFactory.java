@@ -38,7 +38,9 @@ import java.util.function.Function;
 
 public class NettyCommunicatorFactory implements CommunicatorFactory {
     private final static AttributeKey<JaxosSettings.Peer> ATTR_PEER = AttributeKey.newInstance("PEER");
+
     private final static AttributeKey<Boolean> JOIN_FAIL = AttributeKey.newInstance("JOIN_FAIL");
+    private final static AttributeKey<Object> JOINED_BOTH = AttributeKey.newInstance("JOINED_BOTH");
 
     private static Logger logger = LoggerFactory.getLogger(NettyCommunicatorFactory.class);
 
@@ -152,7 +154,7 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
                     }
                     else {
                         logger.info("Socket created to {}", peer);
-                        initChannel(((ChannelFuture)f).channel(), peer);
+                        initChannel(((ChannelFuture) f).channel(), peer);
                     }
                 });
             }
@@ -163,19 +165,21 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
             }
         }
 
-        private void initChannel(Channel c, JaxosSettings.Peer peer){
+        private void initChannel(Channel c, JaxosSettings.Peer peer) {
             c.attr(ATTR_PEER).set(peer);
             PaxosMessage.DataGram d = coder.encode(connectRequestProvider.apply(peer.id()));
             c.writeAndFlush(d);
             newerChannels.add(c);
+            //FIXME handle join request timeout
         }
 
         private void onConnectResponseEvent(Event.JoinResponse event, Channel channel) {
-            if(event.success()){
+            if (event.success()) {
                 channels.add(channel);
                 channelIdMap.put(channel.attr(ATTR_PEER).get().id(), channel.id());
                 logger.info("Success join peer {}", channel.attr(ATTR_PEER).get());
-            } else {
+            }
+            else {
                 logger.info("Failed to join  peer {} due to {}", channel.attr(ATTR_PEER).get(), event.message());
                 channel.attr(JOIN_FAIL).set(true);
                 channel.close();
@@ -239,10 +243,17 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
 
             if (peer != null) {
                 channelIdMap.remove(peer.id());
+
+                //The peer has join to me by this channel
+                if(c.hasAttr(JOINED_BOTH)){
+                    eventWorkerPool.submitEventToSelf(new Event.PeerLeft(config.serverId(), peer.id()));
+                }
+
                 //Channel is closed proactively of login failed, re-try it after 10 seconds
-                if(c.attr(JOIN_FAIL).get() != null) {
+                if (c.attr(JOIN_FAIL).get() != null) {
                     worker.schedule(() -> connect(peer), 10, TimeUnit.SECONDS);
-                } else {
+                }
+                else {
                     connect(peer);
                 }
             }
@@ -291,9 +302,24 @@ public class NettyCommunicatorFactory implements CommunicatorFactory {
 
                 Event event = coder.decode(dataGram);
                 if (event != null) {
-                    if(event.code() == Event.Code.JOIN_RESPONSE){
-                        communicator.onConnectResponseEvent((Event.JoinResponse)event, ctx.channel());
-                    }else {
+                    if (event.code() == Event.Code.JOIN_RESPONSE) {
+                        communicator.onConnectResponseEvent((Event.JoinResponse) event, ctx.channel());
+                    }
+                    //This is special part for haskell acceptor will send join request at this channel
+                    else if (event.code() == Event.Code.JOIN_REQUEST) {
+                        eventWorkerPool.submitEvent(event, e1 -> {
+                            Event.JoinResponse resp = (Event.JoinResponse)e1;
+                            PaxosMessage.DataGram response = coder.encode(resp);
+                            ChannelFuture future = ctx.writeAndFlush(response);
+
+                            if(resp.success()){
+                               ctx.channel().attr(JOINED_BOTH).set(new Object());
+                            } else {
+                                future.addListener(ChannelFutureListener.CLOSE);
+                            }
+                        });
+                    }
+                    else {
                         eventWorkerPool.submitEventToSelf(event);
                     }
                 }

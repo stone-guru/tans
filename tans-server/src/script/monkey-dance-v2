@@ -1,9 +1,8 @@
 #!/bin/bash
 KEY=${1:-"monkey.id"}
-SERVERS=("localhost:8081" "localhost:8082" "localhost:8083")
+SERVERS=("localhost:8081" "localhost:8082")
 #SERVERS=("localhost:8088" "localhost:8088" "localhost:8088")
-TOKEN="0BC9F3
-"
+TOKEN="0BC9F3"
 sleep_seconds=1
 #jq  -j '"\(.key),\(.range[0]),\(.range[1]) \n"'
 k=0

@@ -131,6 +131,10 @@ public class TansService implements StateMachine, HasMetrics {
         }
     }
 
+    public CompletableFuture<ProposeResult<Integer>> acquireClientId(){
+        return CompletableFuture.completedFuture(ProposeResult.success(100));
+    }
+
     /**
      * Read the value from local state. This is not a consensus read
      *
@@ -267,7 +271,8 @@ public class TansService implements StateMachine, HasMetrics {
 
 
     private static ByteString toProposal(List<KeyLong> kx) {
-        TansMessage.TansProposal.Builder builder = TansMessage.TansProposal.newBuilder();
+        TansMessage.AcquireNumberProposal.Builder builder = TansMessage.AcquireNumberProposal.newBuilder();
+
         for (KeyLong k : kx) {
             TansMessage.NumberProposal.Builder b = TansMessage.NumberProposal.newBuilder()
                     .setName(k.key())
@@ -277,20 +282,29 @@ public class TansService implements StateMachine, HasMetrics {
             builder.addProposal(b);
         }
 
-        return builder.build().toByteString();
+        return TansMessage.TansProposal.newBuilder()
+                .setType(TansMessage.ProposalType.ACQUIRE_NUMBER)
+                .setContent(builder.build().toByteString())
+                .build().toByteString();
     }
 
     private static List<KeyLong> fromProposal(ByteString message) {
-        TansMessage.TansProposal proposal;
+        TansMessage.AcquireNumberProposal np;
         try {
-            proposal = TansMessage.TansProposal.parseFrom(message);
+            TansMessage.TansProposal proposal = TansMessage.TansProposal.parseFrom(message);
+            if(proposal.getType() != TansMessage.ProposalType.ACQUIRE_NUMBER){
+                throw new UnsupportedOperationException();
+            }
+            np = TansMessage.AcquireNumberProposal.parseFrom(proposal.getContent());
         }
         catch (InvalidProtocolBufferException e) {
             throw new RuntimeException(e);
         }
 
+
+
         ImmutableList.Builder<KeyLong> builder = ImmutableList.builder();
-        for (TansMessage.NumberProposal p : proposal.getProposalList()) {
+        for (TansMessage.NumberProposal p : np.getProposalList()) {
             builder.add(new KeyLong(p.getName(), p.getValue(), p.getSequence()));
         }
 

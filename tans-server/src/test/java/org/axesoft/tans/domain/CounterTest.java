@@ -1,5 +1,6 @@
 package org.axesoft.tans.domain;
 
+import com.google.common.primitives.Longs;
 import org.junit.Test;
 
 import java.net.Inet4Address;
@@ -27,14 +28,29 @@ public class CounterTest {
         assertTrue(1 == 1);
     }
 
+    static void writeRawVarint32(int value) {
+        while (true) {
+            if ((value & ~0x7F) == 0) {
+                System.out.println(String.format("%x", value));
+                return;
+            } else {
+                int v = (value & 0x7F) | 0x80;
+                byte b = (byte)v;
+                System.out.print(String.format("%x,", b));
+                value >>>= 7;
+            }
+        }
+    }
+
     @Test
     public void testMask() throws Exception {
-
-        for(byte b : InetAddress.getLocalHost().getAddress()){
-            System.out.println(b);
-        }
-
-        System.out.println(String.format("%x", 12638));
+        System.out.println(Long.parseLong("ff", 16));
+        writeRawVarint32(200);
+        writeRawVarint32(300);
+        writeRawVarint32(500);
+        writeRawVarint32(1234);
+        writeRawVarint32(8234);
+        writeRawVarint32(23456);
 
         for (String s : new String[]{
                 "$home/var", "$home_dir/var", "$homedir/abc"

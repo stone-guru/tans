@@ -22,6 +22,8 @@ public class TansMetrics {
     private Counter redirectCounter;
     private Timer requestTimer;
     private Gauge uptimeGauge;
+    private Counter connectionCounter;
+
     private final long startTimestamp = System.currentTimeMillis();
 
     public TansMetrics(int serverId, int squadCount, Function<Integer, Number> keyCountFunction) {
@@ -35,6 +37,10 @@ public class TansMetrics {
 
         this.uptimeGauge = Gauge.builder("tans.uptime.seconds", () -> (System.currentTimeMillis() - startTimestamp)/1000)
                 .description("Server uptime in seconds")
+                .register(registry);
+
+        this.connectionCounter = Counter.builder("tans.request.connect")
+                .description("The success times of HTTP connect")
                 .register(registry);
 
         this.requestCounter = Counter.builder("tans.request.total")
@@ -61,6 +67,10 @@ public class TansMetrics {
         }
     }
 
+    public void incConnectCount(){
+        this.connectionCounter.increment();
+    }
+
     public void incRequestCount() {
         this.requestCounter.increment();
     }
@@ -72,7 +82,6 @@ public class TansMetrics {
     public void recordRequestElapsed(long millis) {
         requestTimer.record(Long.max(millis, 1), TimeUnit.MILLISECONDS);
     }
-
 
     public String format() {
         return registry.scrape();

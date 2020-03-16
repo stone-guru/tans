@@ -37,34 +37,78 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
- * An HTTP server that sends back the content of the received HTTP request
- * in a pretty plaintext form.
+ * The server serving the client HTTP take a number request
  */
 public class HttpApiService extends AbstractExecutionThreadService {
     private static final Logger logger = LoggerFactory.getLogger(HttpApiService.class);
 
     private static final String SERVICE_NAME = "Take-A-Number System";
 
+    /**
+     * The auth token is asked to be carried in header
+     */
     private static final String TOKEN_HEADER_NAME = "X-tans-token";
 
+    /**
+     * Reusable "not found" message
+     */
     private static final ByteBuf NOT_FOUND_BYTEBUF = Unpooled.copiedBuffer("Not Found\n", CharsetUtil.UTF_8);
 
-    private TansService tansService;
+    /**
+     * The global configurations
+     */
     private TansConfig config;
 
+    /**
+     * The actual service providing actual TANS function
+     */
+    private TansService tansService;
+
+    /**
+     * The server channel of the HTTP port
+     */
     private Channel serverChannel;
+
+    /**
+     * The netty's thread pool handling network connecting action
+     */
     private EventLoopGroup bossGroup;
+
+    /**
+     * The netty's thread pool handling each HTTP request
+     */
     private EventLoopGroup workerGroup;
-
+    /**
+     * The request queue for each partition for batching the requests
+     */
     private TansAcquireRequestQueue[] acquireRequestQueues;
-    private Timer queueTimer;
-    private SeqGenerator requestSequenceGenerator;
+    /**
+     * The timer for flushing the queue in case of queue is not full but wait time is enough
+     */
+    private Timer queueFlushTimer;
+    /**
+     * Generator of srn for providing one if request does not curry it
+     */
+    private SeqGenerator requestSeqGenerator;
 
+    /**
+     * Metrics of this service
+     */
     private TansMetrics metrics;
 
+    /**
+     * Map of request handlers for different API version. Although there is only one "v1" handler at present
+     */
     private Map<String, TansHttpRequestHandler> handlerMap;
-    private String hostHeader;
 
+    /**
+     * A const string for filling in the response's header "host"
+     */
+    private final String hostHeaderValue;
+
+    /**
+     * The object in the request queue for indicating an acquire request
+     */
     private static class TansAcquireRequest {
         final KeyLong keyLong;
         final boolean keepAlive;
@@ -72,8 +116,8 @@ public class HttpApiService extends AbstractExecutionThreadService {
         final ChannelHandlerContext ctx;
         final long timestamp;
 
-        public TansAcquireRequest(long seq, String key, long v, boolean ignoreLeader, boolean keepAlive, ChannelHandlerContext ctx) {
-            this.keyLong = new KeyLong(key, v, seq);
+        public TansAcquireRequest(long rsn, String key, long v, boolean ignoreLeader, boolean keepAlive, ChannelHandlerContext ctx) {
+            this.keyLong = new KeyLong(key, v, rsn);
             this.keepAlive = keepAlive;
             this.ignoreLeader = ignoreLeader;
             this.ctx = ctx;
@@ -81,13 +125,38 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
     }
 
+    /**
+     * Interface for different version of HTTP API
+     */
     interface TansHttpRequestHandler {
+        /**
+         * call by server for handling the request. The dispatch method is based on the first path like "/v1/a/b/c", "/v2/x/y".
+         * There is no any assumption except the first segment like "/v1", "/v2"
+         */
         void process(String[] path, HttpRequest request, ChannelHandlerContext context);
 
+        /**
+         * Call by request queue for generating response when acquiring accomplished successfully
+         * @param request the request not null
+         * @param result the result not null
+         * @return not null, a response which will be sent to the client
+         */
         FullHttpResponse createAcquireResponseForSuccess(TansAcquireRequest request, LongRange result);
 
+        /**
+         * Call by request queue for generating response when the request should be redirect to another server
+         * @param request the request
+         * @param otherLeaderId which server should the request be redirected to
+         * @return not null, a response which will be sent to the client
+         */
         FullHttpResponse createAcquireResponseForRedirect(TansAcquireRequest request, int otherLeaderId);
 
+        /**
+         * Call by request queue for generating response when some error happen
+         * @param request the request, not null
+         * @param msg the error message
+         * @return not null, a response which will be sent to the client
+         */
         FullHttpResponse createAcquireResponseForError(TansAcquireRequest request, String msg);
     }
 
@@ -96,14 +165,14 @@ public class HttpApiService extends AbstractExecutionThreadService {
         this.tansService = tansService;
         this.config = config;
         this.metrics = new TansMetrics(config.serverId(), this.config.jaxConfig().partitionNumber(), this.tansService::keyCountOf);
-        this.requestSequenceGenerator = new SeqGenerator(config.serverId());
+        this.requestSeqGenerator = new SeqGenerator(config.serverId());
 
         this.acquireRequestQueues = new TansAcquireRequestQueue[config.jaxConfig().partitionNumber()];
         for (int i = 0; i < acquireRequestQueues.length; i++) {
             this.acquireRequestQueues[i] = new TansAcquireRequestQueue(i, config.requestBatchSize());
         }
 
-        this.handlerMap = ImmutableMap.of( "v0", new TansHttpRequestHandlerV0(),"v1", new TansHttpRequestHandlerV1());
+        this.handlerMap = ImmutableMap.of("v1", new TansHttpRequestHandlerV1());
 
         super.addListener(new Listener() {
             @Override
@@ -126,13 +195,13 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 logger.error(String.format("%s failed %s due to exception", SERVICE_NAME, from), failure);
             }
         }, MoreExecutors.directExecutor());
-        this.hostHeader = config.address() + ":" + config.httpPort();
+        this.hostHeaderValue = config.address() + ":" + config.httpPort();
     }
 
     @Override
     protected void run() throws Exception {
-        this.queueTimer = new Timer("Queue Flush", true);
-        this.queueTimer.scheduleAtFixedRate(new TimerTask() {
+        this.queueFlushTimer = new Timer("Queue Flush", true);
+        this.queueFlushTimer.scheduleAtFixedRate(new TimerTask() {
             private boolean interrupted = false;
 
             @Override
@@ -193,6 +262,12 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
     }
 
+    private static FullHttpResponse createMethodNotAllowedResponse(ChannelHandlerContext ctx, String url, String method) {
+        return createResponse(ctx, HttpResponseStatus.METHOD_NOT_ALLOWED,
+                "Unsupported method \"", method, "\"",
+                "for url ", url);
+    }
+
     private static FullHttpResponse createResponse(ChannelHandlerContext ctx, HttpResponseStatus status, String... vx) {
         ByteBuf buf;
         if (vx == null || vx.length == 0) {
@@ -221,10 +296,10 @@ public class HttpApiService extends AbstractExecutionThreadService {
 
 
     private void writeResponse(ChannelHandlerContext ctx, boolean keepAlive, FullHttpResponse response) {
-        if(!response.headers().contains(HttpHeaderNames.CONTENT_TYPE)){
+        if (!response.headers().contains(HttpHeaderNames.CONTENT_TYPE)) {
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
         }
-        response.headers().set(HttpHeaderNames.HOST, this.hostHeader);
+        response.headers().set(HttpHeaderNames.HOST, this.hostHeaderValue);
         response.headers().set(HttpHeaderNames.CACHE_CONTROL, "no-cache");
         response.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
 
@@ -242,8 +317,14 @@ public class HttpApiService extends AbstractExecutionThreadService {
         return this.handlerMap.get(version);
     }
 
-    public class TansHttpChannelHandler extends SimpleChannelInboundHandler {
+    private class TansHttpChannelHandler extends SimpleChannelInboundHandler {
         private HttpRequest request;
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            super.channelActive(ctx);
+            metrics.incConnectCount();
+        }
 
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -279,7 +360,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
 
         private boolean verifyToken(ChannelHandlerContext ctx, HttpRequest request) {
-            if(request.uri().startsWith("/metrics")){
+            if (request.uri().startsWith("/metrics")) {
                 return true;
             }
 
@@ -336,144 +417,17 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
     }
 
-    private class TansHttpRequestHandlerV0 implements TansHttpRequestHandler {
-
-        //The v0 service URL is http://<host>:<port>/v0/acquire?key=<keyname>[&n=<number>][&ignoreleader=true|false]
-        private static final String ACQUIRE_PATH = "acquire";
-        private static final String KEY_ARG_NAME = "key";
-        private static final String NUM_ARG_NAME = "n";
-        private static final String IGNORE_LEADER_ARG_NAME = "ignoreleader";
-
-        private static final String PARTITION_PATH = "partition_number";
-        private static final String METRICS_PATH = "metrics";
-
-        private static final String ARG_KEY_REQUIRED_MSG = "argument of '" + KEY_ARG_NAME + "' is required";
-
-        @Override
-        public void process(String pathSegments[], HttpRequest request, ChannelHandlerContext ctx) {
-            boolean keepAlive = HttpUtil.isKeepAlive(request);
-            String path = pathSegments.length == 1 ? pathSegments[0] : "";
-
-            if (ACQUIRE_PATH.equals(path)) {
-                Either<String, TansAcquireRequest> either = parseAcquireRequest(request, keepAlive, ctx);
-                if (!either.isRight()) {
-                    FullHttpResponse r = HttpApiService.createResponse(ctx, HttpResponseStatus.BAD_REQUEST, either.getLeft());
-                    writeResponse(ctx, keepAlive, r);
-                    return;
-                }
-
-                TansAcquireRequest tansAcquireRequest = either.getRight();
-                if (logger.isTraceEnabled()) {
-                    logger.trace("Got request {}", tansAcquireRequest.keyLong);
-                }
-                int i = tansService.squadIdOf(tansAcquireRequest.keyLong.key());
-                acquireRequestQueues[i].addRequest(this, tansAcquireRequest);
-            }
-            else if (METRICS_PATH.equals(path)) {
-                String s1 = tansService.formatMetrics();
-                String s2 = metrics.format();
-                FullHttpResponse r = HttpApiService.createResponse(ctx, HttpResponseStatus.OK, s1, s2);
-                writeResponse(ctx, false, r);
-            }
-            else if (PARTITION_PATH.equals(path)) {
-                String s = Integer.toString(config.jaxConfig().partitionNumber());
-                FullHttpResponse r = HttpApiService.createResponse(ctx, HttpResponseStatus.OK, s);
-                writeResponse(ctx, keepAlive, r);
-            }
-            else {
-                FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.NOT_FOUND,
-                        NOT_FOUND_BYTEBUF.retainedDuplicate());
-                writeResponse(ctx, keepAlive, response);
-            }
-        }
-
-
-        private Either<String, TansAcquireRequest> parseAcquireRequest(HttpRequest request, boolean keepAlive, ChannelHandlerContext ctx) {
-            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
-            Map<String, List<String>> params = queryStringDecoder.parameters();
-
-            List<String> vx = params.get(KEY_ARG_NAME);
-            if (vx == null || vx.size() == 0) {
-                return Either.left(ARG_KEY_REQUIRED_MSG);
-            }
-            String key = vx.get(0);
-            if (Strings.isNullOrEmpty(key)) {
-                return Either.left(ARG_KEY_REQUIRED_MSG);
-            }
-
-            long n = 1;
-            List<String> nx = params.get(NUM_ARG_NAME);
-            if (nx != null && nx.size() > 0) {
-                try {
-                    n = Long.parseLong(nx.get(0));
-                    if (n <= 0) {
-                        return Either.left("Zero or negative n '" + n + "'");
-                    }
-                }
-                catch (NumberFormatException e) {
-                    return Either.left("Invalid integer '" + nx.get(0) + "'");
-                }
-            }
-
-            boolean ignoreLeader = false;
-            List<String> bx = params.get(IGNORE_LEADER_ARG_NAME);
-            if (bx != null && bx.size() > 0) {
-                String flag = bx.get(0);
-                if ("true".equalsIgnoreCase(flag)) {
-                    ignoreLeader = true;
-                }
-                else if ("false".equalsIgnoreCase(flag)) {
-                    ignoreLeader = false;
-                }
-                else {
-                    return Either.left("Invalid ignore leader boolean value '" + flag + "'");
-                }
-            }
-
-            return Either.right(new TansAcquireRequest(requestSequenceGenerator.next(), key, n, ignoreLeader, keepAlive, ctx));
-        }
-
-        @Override
-        public FullHttpResponse createAcquireResponseForSuccess(TansAcquireRequest request, LongRange result) {
-            if (logger.isTraceEnabled()) {
-                logger.trace("Write response {},{},{},{}", request.keyLong.key(), request.keyLong.value(),
-                        result.low(), result.high());
-            }
-            return createResponse(request.ctx, HttpResponseStatus.OK,
-                    request.keyLong.key(), ",", Long.toString(result.low()), ",", Long.toString(result.high()), "\r\n");
-        }
-
-        @Override
-        public FullHttpResponse createAcquireResponseForRedirect(TansAcquireRequest request, int otherLeaderId) {
-            int httpPort = config.getPeerHttpPort(otherLeaderId);
-            JaxosSettings.Peer peer = config.jaxConfig().getPeer(otherLeaderId);
-            String url = String.format("http://v0/%s:%s%s?%s=%s&%s=%d",
-                    peer.address(), httpPort, TansHttpRequestHandlerV0.ACQUIRE_PATH,
-                    TansHttpRequestHandlerV0.KEY_ARG_NAME, request.keyLong.key(),
-                    TansHttpRequestHandlerV0.NUM_ARG_NAME, request.keyLong.value());
-
-            FullHttpResponse response = new DefaultFullHttpResponse(
-                    HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT);
-            response.headers().set(HttpHeaderNames.LOCATION, url);
-            return response;
-        }
-
-        @Override
-        public FullHttpResponse createAcquireResponseForError(TansAcquireRequest request, String msg) {
-            FullHttpResponse response = createResponse(request.ctx, HttpResponseStatus.SERVICE_UNAVAILABLE, msg, "\r\n");
-            return response;
-        }
-    }
-
     private class TansHttpRequestHandlerV1 implements TansHttpRequestHandler {
-        //The v2 service URL is http://<host>:<port>/v2/keys/<keyname>[?number=<number>][&ignoreleader=true|false]
+        //The v1 service URL is http://<host>:<port>/v1/keys/<keyname>[?number=<number>][&ignoreleader=true|false]
         //PUT for acquiring an id range, GET for read the key value at present
 
         private static final String KEYS_ROOT_PATH = "keys";
         private static final String NUMBER_ARG_NAME = "number";
-        private static final String SR_ARG_NAME = "seq";
+        private static final String SR_ARG_NAME = "srn";
+        private static final String CLIENT_ID_PATH = "client-id";
 
-        private final String NOT_FOUND_MESSAGE = "{\"message\":\"Not Found\"}\n";
+        private final String NOT_FOUND_MESSAGE = "{\n\"message\":\"Not Found\"\n}\n";
+
         @Override
         public void process(String[] pathSegments, HttpRequest request, ChannelHandlerContext context) {
             String p1 = pathSegments.length > 0 ? pathSegments[0] : "";
@@ -491,18 +445,80 @@ public class HttpApiService extends AbstractExecutionThreadService {
                         acquireRequestQueues[i].addRequest(this, tansAcquireRequest);
                         return;
                     }
+                    else {
+                        response = createResponse(context, HttpResponseStatus.BAD_REQUEST, either.getLeft());
+                    }
                 }
                 else if (request.method().name().equals("GET")) {
                     response = processKeyRead(p2, HttpUtil.isKeepAlive(request), context);
-                } else {
-                    response = this.createJsonResponse(context, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                }
+                else {
+                    response = createMethodNotAllowedResponse(context, request.uri(), request.method().name());
+                }
+            }
+            else if (pathSegments.length == 1 && p1.equals(CLIENT_ID_PATH)) {
+                if (request.method().name().equals("PUT")) {
+                    processAcquireClientIdRequest(context, request);
+                }
+                else {
+                    response = createMethodNotAllowedResponse(context, request.uri(), request.method().name());
                 }
             }
 
-            if(response == null) {
+            if (response == null) {
                 response = this.createJsonResponse(context, HttpResponseStatus.NOT_FOUND, NOT_FOUND_MESSAGE);
             }
             writeResponse(context, false, response);
+        }
+
+        private Either<String, TansAcquireRequest> parseAcquireRequest(String p2, HttpRequest request, ChannelHandlerContext ctx) {
+            if (Strings.isNullOrEmpty(p2)) {
+                return Either.left("key name not provide");
+            }
+
+            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
+            Either<String, Long> n = getLongParam(queryStringDecoder.parameters(), NUMBER_ARG_NAME, 1, 1);
+            if (!n.isRight()) {
+                return Either.castRight(n);
+            }
+            Either<String, Long> srn = getLongParam(queryStringDecoder.parameters(), SR_ARG_NAME, Long.MIN_VALUE, 0);
+            if (!srn.isRight()) {
+                return Either.castRight(srn);
+            }
+
+            long i = srn.getRight() == 0 ? requestSeqGenerator.next() : srn.getRight();
+            return Either.right(new TansAcquireRequest(i, p2, n.getRight(), false, HttpUtil.isKeepAlive(request), ctx));
+        }
+
+        private void processAcquireClientIdRequest(ChannelHandlerContext context, HttpRequest request) {
+            tansService.acquireClientId()
+                    .handle((r, ex) -> {
+                        FullHttpResponse resp;
+                        if (r != null) {
+                            if (r.isSuccess()) {
+                                resp = createJsonResponse(context, HttpResponseStatus.OK,
+                                        "{\n",
+                                        "\"client-id\": ", r.value().toString(), "\n",
+                                        "}\n");
+                            }
+                            else if (r.isRedirect()) {
+                                resp = createJsonResponse(context, HttpResponseStatus.TEMPORARY_REDIRECT);
+                                int httpPort = config.getPeerHttpPort(r.redirectServerId());
+                                JaxosSettings.Peer peer = config.jaxConfig().getPeer(r.redirectServerId());
+                                resp.headers().set(HttpHeaderNames.LOCATION,
+                                        String.format("http://%s:%s/v1/%s", peer.address(), httpPort, CLIENT_ID_PATH));
+                            }
+                            else {
+                                resp = createResponse(context, HttpResponseStatus.SERVICE_UNAVAILABLE);
+                            }
+                        }
+                        else {
+                            logger.error("When acquireClientId ", ex);
+                            resp = createResponse(context, HttpResponseStatus.INTERNAL_SERVER_ERROR, "INTERNAL ERROR");
+                        }
+                        writeResponse(context, HttpUtil.isKeepAlive(request), resp);
+                        return null;
+                    });
         }
 
         @Override
@@ -525,12 +541,17 @@ public class HttpApiService extends AbstractExecutionThreadService {
         public FullHttpResponse createAcquireResponseForRedirect(TansAcquireRequest request, int otherLeaderId) {
             int httpPort = config.getPeerHttpPort(otherLeaderId);
             JaxosSettings.Peer peer = config.jaxConfig().getPeer(otherLeaderId);
-            String url = String.format("http://%s:%s/v1/keys/%s?%s=%d&%s=%d",
-                    peer.address(), httpPort, request.keyLong.key(),
-                    NUMBER_ARG_NAME, request.keyLong.value(), SR_ARG_NAME, request.keyLong.stamp());
+
+            StringBuffer sb = new StringBuffer();
+            sb.append("http://").append(peer.address()).append(":").append(httpPort);
+            sb.append("/v1/keys/").append(request.keyLong.key());
+            sb.append("?").append(NUMBER_ARG_NAME).append("=").append(request.keyLong.value());
+            if (!requestSeqGenerator.isTansGenerate(request.keyLong.stamp())) {
+                sb.append("?").append(SR_ARG_NAME).append("=").append(String.format("0x%x", request.keyLong.stamp()));
+            }
 
             FullHttpResponse response = this.createJsonResponse(request.ctx, HttpResponseStatus.TEMPORARY_REDIRECT);
-            response.headers().set(HttpHeaderNames.LOCATION, url);
+            response.headers().set(HttpHeaderNames.LOCATION, sb.toString());
             return response;
         }
 
@@ -544,24 +565,6 @@ public class HttpApiService extends AbstractExecutionThreadService {
             return response;
         }
 
-        private Either<String, TansAcquireRequest> parseAcquireRequest(String p2, HttpRequest request, ChannelHandlerContext ctx) {
-            if (Strings.isNullOrEmpty(p2)) {
-                return Either.left("key name not provide");
-            }
-
-            QueryStringDecoder queryStringDecoder = new QueryStringDecoder(request.uri());
-            Either<String, Long> n = getLongParam(queryStringDecoder.parameters(), NUMBER_ARG_NAME, 1, 1);
-            if(!n.isRight()){
-                return Either.castRight(n);
-            }
-            Either<String, Long> sr = getLongParam(queryStringDecoder.parameters(), SR_ARG_NAME, Long.MIN_VALUE,0);
-            if(!sr.isRight()) {
-                return Either.castRight(sr);
-            }
-
-            long i = sr.getRight() == 0? requestSequenceGenerator.next() : sr.getRight();
-            return Either.right(new TansAcquireRequest(i, p2, n.getRight(), false, HttpUtil.isKeepAlive(request), ctx));
-        }
 
         private FullHttpResponse processKeyRead(String keyName, boolean keepAlive, ChannelHandlerContext context) {
             Optional<TansNumber> opt = tansService.localValueOf(keyName);
@@ -585,18 +588,26 @@ public class HttpApiService extends AbstractExecutionThreadService {
         }
     }
 
-    private static Either<String, Long> getLongParam(Map<String, List<String>> params, String paramName, long minValue, long deft){
+    private static Either<String, Long> getLongParam(Map<String, List<String>> params, String paramName, long minValue, long deft) {
         long n = deft;
         List<String> nx = params.get(paramName);
         if (nx != null && nx.size() > 0) {
+            String s0 = nx.get(0);
+            int radix = 10;
+            String s1 = s0;
+            if (s0.startsWith("0x") || s0.startsWith("0X")) {
+                s1 = s0.substring(2);
+                radix = 16;
+            }
+
             try {
-                n = Long.parseLong(nx.get(0));
+                n = Long.parseLong(s1, radix);
                 if (n < minValue) {
                     return Either.left("Zero or negative n '" + n + "'");
                 }
             }
             catch (NumberFormatException e) {
-                return Either.left("Invalid integer '" + nx.get(0) + "'");
+                return Either.left("Invalid number '" + nx.get(0) + "'");
             }
         }
         return Either.right(n);
@@ -718,46 +729,51 @@ public class HttpApiService extends AbstractExecutionThreadService {
 
     public static class SeqGenerator {
 
-            private long highBits;
-            private AtomicInteger serialNum;
+        private long highBits;
+        private AtomicInteger serialNum;
+        private static final long MAGIC_MASK = 0xf000_0000_0000_0000L;
 
-            public SeqGenerator(int serverId) {
-                if(serverId > 255 || serverId <= 0){
-                    throw new IllegalArgumentException("Seq generator does not support server id great than 255");
-                }
-                byte[] ip = getIpAddress();
-                long ipMask = Ints.fromByteArray(ip);
-                //this.highBits = (1L << 63) | (ipMask << 32) | (((long)serverId) << 24);
-                this.highBits = (ipMask << 32) | (((long)serverId) << 24);
-                this.serialNum = new AtomicInteger(0);
+        public SeqGenerator(int serverId) {
+            if (serverId > 255 || serverId <= 0) {
+                throw new IllegalArgumentException("Seq generator does not support server id great than 255");
             }
+            byte[] ip = getIpAddress();
+            long ipMask = Ints.fromByteArray(ip);
+            this.highBits = (ipMask << 32) | (((long) serverId) << 24) | MAGIC_MASK;
+            this.serialNum = new AtomicInteger(0);
+        }
 
-            public long next() {
-                return this.highBits | (this.serialNum.getAndIncrement() & 0xfffffffL); //low 24 bits
-            }
+        public long next() {
+            return this.highBits | (this.serialNum.getAndIncrement() & 0xff_ffffL); //low 24 bits
+        }
 
-            private byte[] getIpAddress() {
-                try {
-                    Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
-                    while (networkInterfaces.hasMoreElements()) {
-                        NetworkInterface networkInterface = networkInterfaces.nextElement();
-                        if(networkInterface.isLoopback()){
-                            continue;
-                        }
-                        Enumeration<InetAddress>  addresses = networkInterface.getInetAddresses();
-                        while (addresses.hasMoreElements()) {
-                            InetAddress addr = addresses.nextElement();
-                            if (addr instanceof Inet4Address) {
-                                return addr.getAddress();
-                            }
+        public boolean isTansGenerate(long srn) {
+            return (srn & MAGIC_MASK) == MAGIC_MASK;
+        }
+
+        private byte[] getIpAddress() {
+            try {
+                Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+                while (networkInterfaces.hasMoreElements()) {
+                    NetworkInterface networkInterface = networkInterfaces.nextElement();
+                    if (networkInterface.isLoopback()) {
+                        continue;
+                    }
+                    Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                    while (addresses.hasMoreElements()) {
+                        InetAddress addr = addresses.nextElement();
+                        if (addr instanceof Inet4Address) {
+                            return addr.getAddress();
                         }
                     }
-                } catch (SocketException e) {
-                    throw new RuntimeException(e);
                 }
-
-                return new byte[]{127, 0, 0, 1};
             }
+            catch (SocketException e) {
+                throw new RuntimeException(e);
+            }
+
+            return new byte[]{127, 0, 0, 1};
+        }
 
     }
 }

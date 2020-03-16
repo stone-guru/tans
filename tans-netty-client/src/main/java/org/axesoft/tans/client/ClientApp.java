@@ -23,6 +23,7 @@ public class ClientApp {
         private String token = "0BC9F3";
         private int keyNumber = 1000;
         private boolean forever=false;
+        private int interval = 0;
     }
 
     private static Settings parseArgs(String[] params) {
@@ -36,6 +37,7 @@ public class ClientApp {
         options.addOption("T", "token", true, "token for API access");
         options.addOption("r", "key-prefix", true, "The prefix of require key");
         options.addOption("f", "forever", false, "Let test run again and again");
+        options.addOption("", "interval", true, "The interval in millis between requests for each client");
 
         CommandLineParser parser = new DefaultParser();
         CommandLine line = null;
@@ -83,6 +85,10 @@ public class ClientApp {
             settings.forever = true;
         }
 
+        if(line.hasOption("interval")) {
+            settings.interval = Integer.parseInt(line.getOptionValue("interval"));
+        }
+
         return settings;
     }
 
@@ -102,8 +108,8 @@ public class ClientApp {
                     new TansClientRunner(settings)
                             .setStartLatch(startLatch)
                             .setChecker(checker)
-                            .setMillis(millis)
-                            .setTimes(times)
+                            .setDurationCounter(millis)
+                            .setTimesCounter(times)
                             .execute();
                 }
                 catch (Exception e) {
@@ -170,6 +176,9 @@ public class ClientApp {
                     if (interval != 0 && i % interval == 0) {
                         System.out.println(String.format("[%s], %d, %s, %s", Thread.currentThread().getName(), i, key, r.toString()));
                     }
+                    if(settings.interval > 0){
+                        Thread.sleep(settings.interval);
+                    }
                 }
             }
             finally {
@@ -198,12 +207,12 @@ public class ClientApp {
             return this;
         }
 
-        public TansClientRunner setMillis(AtomicLong millis) {
+        public TansClientRunner setDurationCounter(AtomicLong millis) {
             this.millis = millis;
             return this;
         }
 
-        public TansClientRunner setTimes(AtomicLong times) {
+        public TansClientRunner setTimesCounter(AtomicLong times) {
             this.times = times;
             return this;
         }
@@ -218,7 +227,7 @@ public class ClientApp {
         }
 
         public void accept(String key, long low, long high) {
-            RangeCombinator combinator = this.combinatorMap.computeIfAbsent(key, k -> new RangeCombinator(k, this.limit));
+            RangeCombinator combinator = this.combinatorMap.computeIfAbsent(key, k -> new RangeCombinator(this.limit));
             combinator.accept(low, high);
         }
 
@@ -242,15 +251,13 @@ public class ClientApp {
     }
 
     public static class RangeCombinator {
-        private String key;
         private int limit;
         private long last = 0;
         private String errMsg;
         private SortedSet<Range<Long>> ranges = new TreeSet<>(Comparator.comparingLong(Range::getMinimum));
 
-        public RangeCombinator(String key, int limit) {
+        public RangeCombinator(int limit) {
             this.limit = limit;
-            this.key = key;
         }
 
         public synchronized void accept(long low, long high) {

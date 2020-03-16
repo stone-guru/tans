@@ -320,6 +320,7 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     }
 
     private Event decodeAcceptResponse(PaxosMessage.DataGram dataGram) throws InvalidProtocolBufferException {
+
         PaxosMessage.AcceptRes res = PaxosMessage.AcceptRes.parseFrom(dataGram.getBody());
         return new Event.AcceptResponse(dataGram.getSender(), res.getSquadId(),
                 res.getInstanceId(), res.getRound(),
@@ -356,9 +357,9 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
     //BallotValue related
 
     public Event.BallotValue decodeValue(PaxosMessage.BallotValue value) {
-        Event.ValueType t = valueTypeDecodeMap.get(value.getType());
+        Event.ValueType t = valueTypeDecodeMap.get(value.getValueType());
         if (t == null) {
-            throw new IllegalArgumentException("Unknown value type " + value.getType());
+            throw new IllegalArgumentException("Unknown value type " + value.getValueType());
         }
         return new Event.BallotValue(value.getId(), t, value.getContent());
     }
@@ -370,7 +371,7 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
         }
         return PaxosMessage.BallotValue.newBuilder()
                 .setId(value.id())
-                .setType(t)
+                .setValueType(t)
                 .setContent(value.content())
                 .build();
     }

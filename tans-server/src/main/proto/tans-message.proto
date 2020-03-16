@@ -1,25 +1,40 @@
 // -*- compile-command: "protoc tans-message.proto --java_out=../java/" -*-
 
-syntax = "proto3";
+syntax = "proto2";
 package  org.axesoft.tans.protobuff;
 
 option java_outer_classname="TansMessage";
 
 message ProtoTansNumber {
-  string name = 1;
-  int64 value = 2;
-  int64 version = 3;
-  int64 timestamp = 4;
+  required string name = 1;
+  required int64 value = 2;
+  required int64 version = 3;
+  required int64 timestamp = 4;
+}
+
+enum ProposalType {
+  ACQUIRE_NUMBER = 1;
+  READ_NUBER_VALUE = 2;
+  ACQUIRE_CLIENT_ID = 3;
 }
 
 message NumberProposal {
-  string name = 1;
-  int64  value = 2;
-  int64 sequence = 3;
+  required string name = 1;
+  required int64  value = 2;
+  required int64 sequence = 3;
 }
 
 message TansProposal {
+  required ProposalType type = 1;
+  required bytes content = 2;
+}
+
+message AcquireNumberProposal {
   repeated NumberProposal proposal = 1;
+}
+
+message ReadNumberValueProposal {
+  required string key = 1;
 }
 
 message TansCheckPoint {

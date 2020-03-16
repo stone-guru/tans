@@ -90,6 +90,7 @@ public class EventWorkerPool implements EventTimer {
     }
 
     public void shutdown() {
+        this.timer.stop();
         for (ExecutorService executor : this.ballotExecutors) {
             executor.shutdownNow();
         }
