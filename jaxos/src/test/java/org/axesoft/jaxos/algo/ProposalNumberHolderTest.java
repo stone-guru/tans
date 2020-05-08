@@ -21,7 +21,11 @@ public class ProposalNumberHolderTest {
     public void testNextProposal1(){
         //50 = 3 * 16 + 2, next one should be 3 * 16 + 3, where 3 is own server id
         assertEquals(51, holder.proposalGreatThan(50));
-        //52 = 3 * 16 + 4, next should be 4 * 16 + 3 = 67
+
+        //51 = 3 * 16 + 3, next one should be 4 * 16 + 3, where 3 is own server id
+        assertEquals(67, holder.proposalGreatThan(51));
+
+        //52 = 3 * 16 + 4, next should be (3 + 1) * 16 + 3 = 67
         assertEquals(67, holder.proposalGreatThan(52));
     }
 }
