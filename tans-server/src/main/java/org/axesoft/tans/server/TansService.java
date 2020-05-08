@@ -131,7 +131,7 @@ public class TansService implements StateMachine, HasMetrics {
         }
     }
 
-    public CompletableFuture<ProposeResult<Integer>> acquireClientId(){
+    public CompletableFuture<ProposeResult<Integer>> acquireClientId() {
         return CompletableFuture.completedFuture(ProposeResult.success(100));
     }
 
@@ -151,7 +151,7 @@ public class TansService implements StateMachine, HasMetrics {
         try {
             ImmutableList.Builder<LongRange> builder = ImmutableList.builder();
             for (KeyLong req : requests) {
-                LongRange r = snapShot == null? null : snapShot.resultCache().getIfPresent(req.stamp());
+                LongRange r = snapShot == null ? null : snapShot.resultCache().getIfPresent(req.stamp());
                 if (r == null) {
                     r = containedResults.get(req.stamp());
                 }
@@ -234,6 +234,17 @@ public class TansService implements StateMachine, HasMetrics {
 
             this.numbers = applyChange(kx, this.numbers);
             this.lastInstanceId = instanceId;
+
+            if(logger.isTraceEnabled()) {
+                StringBuffer sb = new StringBuffer("After consume instance ").append(instanceId);
+                for (TansNumber n : numbers.values()) {
+                    sb.append(", ")
+                            .append(n.name())
+                            .append(",")
+                            .append(n.value());
+                }
+                logger.trace(sb.toString());
+            }
         }
 
         synchronized public TansNumberMapSnapShot createSnapShot() {
@@ -292,7 +303,7 @@ public class TansService implements StateMachine, HasMetrics {
         TansMessage.AcquireNumberProposal np;
         try {
             TansMessage.TansProposal proposal = TansMessage.TansProposal.parseFrom(message);
-            if(proposal.getType() != TansMessage.ProposalType.ACQUIRE_NUMBER){
+            if (proposal.getType() != TansMessage.ProposalType.ACQUIRE_NUMBER) {
                 throw new UnsupportedOperationException();
             }
             np = TansMessage.AcquireNumberProposal.parseFrom(proposal.getContent());
@@ -300,7 +311,6 @@ public class TansService implements StateMachine, HasMetrics {
         catch (InvalidProtocolBufferException e) {
             throw new RuntimeException(e);
         }
-
 
 
         ImmutableList.Builder<KeyLong> builder = ImmutableList.builder();

@@ -18,7 +18,7 @@ while [ true ]; do
     err=$(echo "$result"|grep 'HTTP/1.1 5')
     if [ -z "$result" ] || [ -n "$err" ]; then
 	let k=($k+1)%${#SERVERS[@]}
-	url="http://${SERVERS[$k]}/v2/keys/$KEY"
+	url="http://${SERVERS[$k]}/v1/keys/$KEY"
 	echo "Switch to another server $url"
     else 
 	if echo "$result"|grep 'HTTP/1.1 200 OK' >> /dev/null; then

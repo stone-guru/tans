@@ -212,7 +212,7 @@ public class JaxosService extends AbstractExecutionThreadService implements Prop
 
         this.timerExecutor.scheduleWithFixedDelay(this::checkAndSaveCheckPoint, settings.checkPointMinutes() * 60, 10, TimeUnit.SECONDS);
 
-        this.timerExecutor.scheduleWithFixedDelay(this::runForLeader, (this.settings.leaderLeaseSeconds() + 2) * 1000, LEADER_CHECK_DURATION.toMillis(), TimeUnit.MILLISECONDS);
+        //this.timerExecutor.scheduleWithFixedDelay(this::runForLeader, (this.settings.leaderLeaseSeconds() + 2) * 1000, LEADER_CHECK_DURATION.toMillis(), TimeUnit.MILLISECONDS);
 
 
         NettyCommunicatorFactory factory = new NettyCommunicatorFactory(settings, this.eventWorkerPool, this.platoon::createConnectRequest);

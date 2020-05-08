@@ -137,15 +137,17 @@ public class HttpApiService extends AbstractExecutionThreadService {
 
         /**
          * Call by request queue for generating response when acquiring accomplished successfully
+         *
          * @param request the request not null
-         * @param result the result not null
+         * @param result  the result not null
          * @return not null, a response which will be sent to the client
          */
         FullHttpResponse createAcquireResponseForSuccess(TansAcquireRequest request, LongRange result);
 
         /**
          * Call by request queue for generating response when the request should be redirect to another server
-         * @param request the request
+         *
+         * @param request       the request
          * @param otherLeaderId which server should the request be redirected to
          * @return not null, a response which will be sent to the client
          */
@@ -153,8 +155,9 @@ public class HttpApiService extends AbstractExecutionThreadService {
 
         /**
          * Call by request queue for generating response when some error happen
+         *
          * @param request the request, not null
-         * @param msg the error message
+         * @param msg     the error message
          * @return not null, a response which will be sent to the client
          */
         FullHttpResponse createAcquireResponseForError(TansAcquireRequest request, String msg);
@@ -346,6 +349,14 @@ public class HttpApiService extends AbstractExecutionThreadService {
                 }
 
                 String path = getRawPath(request.uri());
+                if (path.equals("/metrics")) {
+                    String s1 = tansService.formatMetrics();
+                    String s2 = metrics.format();
+                    FullHttpResponse r = HttpApiService.createResponse(ctx, HttpResponseStatus.OK, s1, s2);
+                    writeResponse(ctx, false, r);
+                    return;
+                }
+
                 Pair<String, String[]> p = extractPath(path);
                 TansHttpRequestHandler handler = getRequestHandler(p.getLeft());
                 if (handler == null) {
@@ -425,6 +436,7 @@ public class HttpApiService extends AbstractExecutionThreadService {
         private static final String NUMBER_ARG_NAME = "number";
         private static final String SR_ARG_NAME = "srn";
         private static final String CLIENT_ID_PATH = "client-id";
+        public static final String METRICS_PATH = "metrics";
 
         private final String NOT_FOUND_MESSAGE = "{\n\"message\":\"Not Found\"\n}\n";
 

@@ -22,7 +22,7 @@
 	<configuration>
           <archive>
             <manifest>
-              <mainClass>org.axesoft.tans.server.EventSender</mainClass>
+              <mainClass>org.axesoft.tans.server.TansServerApp</mainClass>
               <addClasspath>true</addClasspath>
               <!-- classpathPrefix>./</classpathPrefix -->
             </manifest>

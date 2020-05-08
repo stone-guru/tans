@@ -253,7 +253,7 @@ public class Proposer {
         else {
             //The value of this synod has been chosen
             if (this.prepareActor.totalMaxProposal == Integer.MAX_VALUE) {
-                if (this.prepareActor.acceptedBallotId == this.proposeValue.id()) {
+                if (this.prepareActor.acceptedValue.id() == this.proposeValue.id()) {
                     if (logger.isDebugEnabled()) {
                         logger.debug("S{} I{} Other proposer help finish ", context.squadId(), this.instanceId);
                     }
@@ -414,13 +414,11 @@ public class Proposer {
         private int totalMaxProposal = 0;
         private int maxAcceptedProposal = 0;
         private Event.BallotValue acceptedValue;
-        private long acceptedBallotId = 0;
         private final BitSet repliedNodes = new BitSet();
 
 
         private boolean someOneReject = false;
         private int approvedCount = 0;
-        private long maxOtherChosenInstanceId = 0;
         private int votedCount = 0;
 
         public PrepareActor() {
@@ -433,7 +431,6 @@ public class Proposer {
             this.acceptedValue = null;
             this.someOneReject = false;
             this.approvedCount = 0;
-            this.maxOtherChosenInstanceId = 0;
             this.votedCount = 0;
             this.repliedNodes.clear();
 
@@ -485,11 +482,6 @@ public class Proposer {
             if (response.acceptedBallot() > this.maxAcceptedProposal) {
                 this.maxAcceptedProposal = response.acceptedBallot();
                 this.acceptedValue = response.acceptedValue();
-                this.acceptedBallotId = response.acceptedValue().id();
-            }
-
-            if (response.chosenInfo().instanceId() >= this.maxOtherChosenInstanceId) {
-                this.maxOtherChosenInstanceId = response.chosenInfo().instanceId();
             }
         }
 
@@ -513,13 +505,6 @@ public class Proposer {
             return this.totalMaxProposal;
         }
 
-        private int maxAcceptedProposal() {
-            return this.maxAcceptedProposal;
-        }
-
-        private long maxOtherChosenInstanceId() {
-            return this.maxOtherChosenInstanceId;
-        }
     }
 
     private class AcceptActor {
@@ -617,23 +602,53 @@ public class Proposer {
     }
 
 
-    private static class ProposalNumHolder {
+    /**
+     * The unique proposal number is consist of two parts: high bits of sequence number and low bits of serverId
+     * num = sequence number * range + serverId, where serverId < range
+     */
+    public static class ProposalNumHolder {
         private int serverId;
         private int range;
 
+        /**
+         * Initialize seeds of this proposal number holder
+         *
+         * @param serverId the serverId which should be unique in all cluster
+         * @param range    the range mean the multiple of the sequence
+         */
         public ProposalNumHolder(int serverId, int range) {
-            checkArgument(serverId > 0 && serverId < range, "server id %d beyond range");
+            checkArgument(serverId > 0 && serverId < range, "server id(%d) out of range(%d)", serverId, range);
             this.serverId = serverId;
             this.range = range;
         }
 
+        /**
+         * The first proposal
+         *
+         * @return sequence number * range + serverid, where sequence number = 0.
+         */
         public int getProposal0() {
             return this.serverId;
         }
 
+        /**
+         * Generate a proposal great than the given number.
+         * <ul>
+         *     <li>if my server id is great than the server id contained in the given proposal, then replace the server part of the parameter</li>
+         *     <li>otherwise, increase the sequence number and combine with the own server id </li>
+         * </ul>
+         *
+         * @param proposal a proposal
+         * @return a proposal number great than the parameter
+         */
         public int proposalGreatThan(int proposal) {
-            final int r = this.range;
-            return ((proposal / r) + 1) * r + this.serverId;
+            final int otherServerId = proposal % this.range;
+            if (this.serverId > otherServerId) {
+                return proposal - otherServerId + this.serverId;
+            }
+            else {
+                return ((proposal / this.range) + 1) * this.range + this.serverId;
+            }
         }
     }
 }

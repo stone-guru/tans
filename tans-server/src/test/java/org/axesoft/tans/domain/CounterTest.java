@@ -18,12 +18,15 @@ import static org.junit.Assert.assertTrue;
 public class CounterTest {
     @Test
     public void test1() {
-        String[] keys = new String[]{"goose.id", "tiger.id", "lion05.id", "moose.id", "pig.id", "star15.id", "girl.id", "monkey.id", "actress.id", "soldier.id"};
-        System.out.println(Math.abs(Integer.MIN_VALUE));
+        String[] keys = new String[]{"goose.id", "tiger.id", "lion05.id", "moose.id", "pig.id", "star15.id",
+                "girl.id", "monkey.id", "actress.id", "soldier.id",
+                 "", "x", "This is a very long ==complicated== long %key%"};
+
+        System.out.println(Math.abs(Long.MIN_VALUE));
         for (String k : keys) {
             int c1 = k.hashCode();
             int c2 = (c1 < 0 ? -c1 : c1);
-            System.out.println(String.format("key = %s, hashcode=%d, squad=%d", k, c2, c2 % 6));
+            System.out.println(String.format("key = %s, hashcode=%d, squad=%d", k, c1, c2 % 6));
         }
         assertTrue(1 == 1);
     }

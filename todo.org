@@ -88,6 +88,17 @@ are by netty
 ** DONE app's virt memory grow to more 20G , while res is several m only and Xmx is set to 1G		:base:
    It's issue of leveldbjni package and solved by change log lib to RocksDB
 
+** TODO when 2 nodes works, if one restart the id sequrece does not continue
+   localhost:8081,monkey.id,270,270
+   localhost:8081,monkey.id,271,271
+   localhost:8081,monkey.id,272,272
+   Switch to another server http://localhost:8082/v1/keys/monkey.id
+   Switch to another server http://localhost:8082/v1/keys/monkey.id
+   localhost:8082,monkey.id,31,31  -- the following three error
+   localhost:8082,monkey.id,32,32
+   localhost:8082,monkey.id,33,33
+   localhost:8082,monkey.id,273,273
+   
 * Release
 ** DONE change config name of "db.implementation" to "db.backend"
 ** DONE change deploy nodes from 1,2,3 to 2,3,4
