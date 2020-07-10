@@ -531,11 +531,11 @@ public abstract class Event {
         }
     }
 
-    public static class ChosenNotify extends BallotEvent {
+    public static class ChosenNotification extends BallotEvent {
         private int ballot;
         private long ballotId;
 
-        public ChosenNotify(int sender, int squadId, long instanceId, int ballot, long ballotId) {
+        public ChosenNotification(int sender, int squadId, long instanceId, int ballot, long ballotId) {
             super(sender, squadId, instanceId, 0);
             this.ballot = ballot;
             this.ballotId = ballotId;

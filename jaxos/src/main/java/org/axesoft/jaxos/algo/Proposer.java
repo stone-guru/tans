@@ -1,17 +1,13 @@
 package org.axesoft.jaxos.algo;
 
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.SettableFuture;
 import io.netty.util.Timeout;
 import org.axesoft.jaxos.JaxosSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.BitSet;
-import java.util.ConcurrentModificationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -595,7 +591,7 @@ public class Proposer {
             }
 
             //Then notify other peers
-            Event notify = new Event.ChosenNotify(Proposer.this.settings.serverId(), Proposer.this.context.squadId(),
+            Event notify = new Event.ChosenNotification(Proposer.this.settings.serverId(), Proposer.this.context.squadId(),
                     Proposer.this.instanceId, this.proposal, this.sentValue.id());
             Proposer.this.config.getCommunicator().selfFirstBroadcast(notify);
         }

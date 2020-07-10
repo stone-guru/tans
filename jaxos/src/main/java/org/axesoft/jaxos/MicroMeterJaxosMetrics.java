@@ -139,9 +139,16 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
         private Gauge instanceIdGauge;
         private Gauge proposeQueueSizeGauge;
 
+        private boolean normalStatus = true;
+
         public MicroMeterSquadMetrics(int squadId, PrometheusMeterRegistry registry) {
             this.squadId = squadId;
             this.registry = registry;
+
+            Gauge.builder("acceptor.status", () -> normalStatus? 1 : 0)
+                    .description("Whether acceptor of this squad in normal status")
+                    .tags("squad", Integer.toString(this.squadId))
+                    .register(registry);
 
             this.proposeRequestCounter = Counter.builder("propose.request.count")
                     .description("The counter of propose request")
@@ -214,6 +221,11 @@ public class MicroMeterJaxosMetrics implements JaxosMetrics {
                         .tags("squad", Integer.toString(this.squadId))
                         .register(registry);
             }
+        }
+
+        @Override
+        public void setNormalStatus(boolean normal) {
+            this.normalStatus = normal;
         }
 
         @Override

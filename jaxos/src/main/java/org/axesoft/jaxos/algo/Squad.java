@@ -192,7 +192,7 @@ public class Squad implements EventDispatcher {
                 return null;
             }
             case CHOSEN_NOTIFY: {
-                acceptor.onChosenNotify(((Event.ChosenNotify) event));
+                acceptor.onChosenNotify(((Event.ChosenNotification) event));
                 return null;
             }
             case PROPOSAL_TIMEOUT: {

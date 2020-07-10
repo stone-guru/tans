@@ -16,4 +16,5 @@ public interface SquadMetrics {
     void createProposeQueueSizeIfNotSet(Supplier<Number> sizeSupplier);
     void createLeaderGaugeIfNotSet(Supplier<Number> leaderSupplier);
     void createInstanceIdGaugeIfNotSet(Supplier<Number> leaderSupplier);
+    void setNormalStatus(boolean normal);
 }

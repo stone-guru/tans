@@ -74,7 +74,7 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
                 break;
             }
             case CHOSEN_NOTIFY: {
-                body = encodeBody((Event.ChosenNotify) event);
+                body = encodeBody((Event.ChosenNotification) event);
                 break;
             }
             case LEARN_REQUEST: {
@@ -183,7 +183,7 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
                 .toByteString();
     }
 
-    private ByteString encodeBody(Event.ChosenNotify notify) {
+    private ByteString encodeBody(Event.ChosenNotification notify) {
         return PaxosMessage.AcceptedNotify.newBuilder()
                 .setSquadId(notify.squadId())
                 .setInstanceId(notify.instanceId())
@@ -330,7 +330,7 @@ public class ProtoMessageCoder implements MessageCoder<PaxosMessage.DataGram> {
 
     private Event decodeAcceptedNotify(PaxosMessage.DataGram dataGram) throws InvalidProtocolBufferException {
         PaxosMessage.AcceptedNotify notify = PaxosMessage.AcceptedNotify.parseFrom(dataGram.getBody());
-        return new Event.ChosenNotify(dataGram.getSender(), notify.getSquadId(), notify.getInstanceId(),
+        return new Event.ChosenNotification(dataGram.getSender(), notify.getSquadId(), notify.getInstanceId(),
                 notify.getProposal(), notify.getBallotId());
     }
 
